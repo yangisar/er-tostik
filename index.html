@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Er Tostik: Precision Combat</title>
+    <title>Er Tostik: Arcade Combat</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
 
@@ -158,11 +158,11 @@
 
     <div id="start-screen" class="overlay">
         <h1 style="font-size: 3rem; margin-bottom: 0; text-shadow: 0 0 20px cyan;">ER TOSTIK</h1>
-        <p style="color: #888; letter-spacing: 3px; margin-top:5px;">PRECISION COMBAT</p>
+        <p style="color: #888; letter-spacing: 3px; margin-top:5px;">ARCADE DESCENT</p>
         <p style="font-size: 0.8rem; color:#666; max-width: 300px; margin-top: 20px;">
-            Use Joystick to AIM sword.<br>
-            The Abyss winds left and right.<br>
-            Watch your fall speed.
+            Aim Joystick to Slash.<br>
+            Fall on heads to <span style="color:#fff">STOMP</span>.<br>
+            Hit projectiles to deflect.
         </p>
         <button class="menu-btn" onclick="startGame()">Descend</button>
     </div>
@@ -180,8 +180,9 @@
         // --- Config ---
         let W, H;
         const GRAVITY = 0.5;
-        const FRICTION = 0.85;
-        const WALL_GAP = 300; // Width of the tunnel
+        const FRICTION_STONE = 0.85;
+        const FRICTION_ICE = 0.98;
+        const WALL_GAP = 300; 
         const FALL_DMG_THRESHOLD = 450;
         
         // --- State ---
@@ -192,20 +193,48 @@
         let shake = 0;
         let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false };
 
+        // --- Sprites (Simple Bitmaps) ---
+        // 1 = Color, 0 = Empty
+        const SPRITE_CRAWLER = [
+            "00111100",
+            "01111110",
+            "11011011",
+            "11111111",
+            "10100101"
+        ];
+        const SPRITE_BAT = [
+            "10000001",
+            "01000010",
+            "01100110",
+            "00111100",
+            "00011000"
+        ];
+        const SPRITE_SENTINEL = [
+            "00111100",
+            "01100110",
+            "11011011",
+            "10011001",
+            "11011011",
+            "01100110",
+            "00111100"
+        ];
+
         // --- Objects ---
         let player = {
             x: 0, y: 0, w: 20, h: 55,
             vx: 0, vy: 0,
             hp: 100, maxHp: 100,
             facing: 1,
-            aimAngle: 0, // NEW: Aiming angle in radians
+            aimAngle: 0,
             grounded: false,
+            wallSliding: false,
             fallStartY: 0,
             animState: 'idle',
             animTimer: 0,
             invincible: 0,
             buff: null, buffTimer: 0,
-            atkCooldown: 0
+            atkCooldown: 0,
+            friction: FRICTION_STONE
         };
 
         let platforms = [];
@@ -227,7 +256,6 @@
             let t = e.changedTouches[0];
             touchId = t.identifier;
             startX = t.clientX; startY = t.clientY;
-            
             let rect = stickZone.getBoundingClientRect();
             stickBase.style.display = 'block';
             stickBase.style.left = (startX - rect.left - 45) + 'px';
@@ -247,19 +275,13 @@
                     let max = 45;
                     if(dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
                     stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-                    
-                    // Normalize inputs -1 to 1
                     inputs.x = dx / max; 
                     inputs.y = dy / max;
                 }
             }
         }, {passive: false});
 
-        const resetStick = () => { 
-            touchId = null; inputs.x = 0; inputs.y = 0; 
-            stickBase.style.display = 'none'; 
-            inputs.activeStick = false;
-        };
+        const resetStick = () => { touchId = null; inputs.x = 0; inputs.y = 0; stickBase.style.display = 'none'; inputs.activeStick = false; };
         stickZone.addEventListener('touchend', resetStick);
         stickZone.addEventListener('touchcancel', resetStick);
 
@@ -281,31 +303,21 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // --- Math Helpers ---
-        function getTunnelOffset(y) {
-            // Curvature formula: Sine wave that changes phase over depth
-            return Math.sin(y * 0.002) * (W * 0.25);
-        }
-
+        function getTunnelOffset(y) { return Math.sin(y * 0.002) * (W * 0.25); }
         function showToast(msg, color="#fff") {
-            const t = document.getElementById('toast-msg');
-            t.innerText = msg; t.style.color = color; t.style.opacity = 1;
+            const t = document.getElementById('toast-msg'); t.innerText = msg; t.style.color = color; t.style.opacity = 1;
             setTimeout(() => t.style.opacity = 0, 1500);
         }
 
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-over').classList.add('hidden');
-            
             player.x = W/2; player.y = 100; player.vx = 0; player.vy = 0;
-            player.hp = 100; player.buff = null;
-            player.fallStartY = player.y;
+            player.hp = 100; player.buff = null; player.fallStartY = player.y;
             camY = 0; score = 0;
-            
             platforms = []; items = []; particles = []; enemies = []; projectiles = [];
             platforms.push({x: W/2-100, y: 300, w: 200, h: 20, type:'stone'});
             genWorld(350, 2000);
-            
             gameActive = true;
             loop();
         }
@@ -314,30 +326,23 @@
             let y = sy;
             while(y < ey) {
                 y += 90 + Math.random() * 80;
-                
-                // Calculate tunnel position at this depth
                 let offset = getTunnelOffset(y);
                 let tunnelCenter = (W/2) + offset;
-                
-                // Platform within tunnel bounds
                 let w = 80 + Math.random() * 100;
                 let minX = tunnelCenter - (WALL_GAP/2) + 20;
                 let maxX = tunnelCenter + (WALL_GAP/2) - w - 20;
                 let x = minX + Math.random() * (maxX - minX);
                 
-                // Platform Types
                 let pType = 'stone';
-                if (Math.random() < 0.2) pType = 'obsidian';
-                else if (Math.random() < 0.2) pType = 'bone';
+                if (Math.random() < 0.2) pType = 'ice';
+                else if (Math.random() < 0.2) pType = 'slime';
 
                 platforms.push({x, y, w, h: 25, type: pType});
 
-                // Enemies
                 if (Math.random() < 0.4 && y > 500) {
                     let type = 'crawler';
                     if (y > 1000 && Math.random() > 0.6) type = 'bat';
                     if (y > 2000 && Math.random() > 0.8) type = 'sentinel';
-
                     enemies.push({
                         type: type,
                         x: x + w/2, y: y - 20,
@@ -346,10 +351,8 @@
                         hp: type === 'sentinel' ? 40 : 20,
                         patrol: [x, x+w],
                         timer: 0,
-                        startY: y - 20 
                     });
                 }
-                
                 if(Math.random() < 0.1) {
                     let types = ['red', 'blue', 'green', 'orange'];
                     items.push({ x: x + w/2, y: y - 30, type: types[Math.floor(Math.random()*types.length)] });
@@ -361,90 +364,106 @@
             if(!gameActive) return;
             frame++;
             
-            // 1. Aim Calculation (Precision)
+            // Aiming
             if (inputs.activeStick && (Math.abs(inputs.x) > 0.1 || Math.abs(inputs.y) > 0.1)) {
                 player.aimAngle = Math.atan2(inputs.y, inputs.x);
                 if (inputs.x !== 0) player.facing = Math.sign(inputs.x);
             } else {
-                // Default aim forward
                 player.aimAngle = (player.facing === 1) ? 0 : Math.PI;
             }
 
-            // 2. Physics
+            // Physics
             player.vx = inputs.x * 5.5;
             player.vy += GRAVITY;
             if(player.buff === 'green' && player.vy > 2) player.vy = 2;
-
             if (player.vy < 0) player.fallStartY = player.y;
 
             player.x += player.vx;
             player.y += player.vy;
-            player.vx *= FRICTION;
+            player.vx *= player.friction; // Dynamic friction
 
-            // 3. Wall Collision (Curved)
+            // Wall Slide
             let tunnelOffset = getTunnelOffset(player.y);
-            let tunnelCenter = (W/2) + tunnelOffset;
-            let leftWall = tunnelCenter - (WALL_GAP/2);
-            let rightWall = tunnelCenter + (WALL_GAP/2);
+            let leftWall = (W/2) + tunnelOffset - (WALL_GAP/2);
+            let rightWall = (W/2) + tunnelOffset + (WALL_GAP/2);
+            player.wallSliding = false;
 
             if(player.x < leftWall + 10) { 
                 player.x = leftWall + 10; player.vx = 0; 
-                if(player.vy > 0) { player.vy*=0.8; player.fallStartY = player.y; }
+                if(player.vy > 0) { 
+                    player.vy*=0.8; player.fallStartY = player.y; player.wallSliding = true; player.facing = 1;
+                }
             }
             if(player.x > rightWall - 10) { 
                 player.x = rightWall - 10; player.vx = 0; 
-                if(player.vy > 0) { player.vy*=0.8; player.fallStartY = player.y; }
+                if(player.vy > 0) { 
+                    player.vy*=0.8; player.fallStartY = player.y; player.wallSliding = true; player.facing = -1;
+                }
             }
 
-            // 4. Animation State
-            if (!player.grounded) {
-                player.animState = player.vy < 0 ? 'jump' : 'fall';
-            } else if (Math.abs(inputs.x) > 0.1) {
-                player.animState = 'run';
-            } else {
-                player.animState = 'idle';
+            // Animation State
+            if (player.animState !== 'attack') {
+                if (player.wallSliding) player.animState = 'climb';
+                else if (!player.grounded) player.animState = player.vy < 0 ? 'jump' : 'fall';
+                else if (Math.abs(inputs.x) > 0.1) player.animState = 'run';
+                else player.animState = 'idle';
             }
             player.animTimer++;
 
-            // 5. Jump
-            if(inputs.jump && player.grounded) {
-                player.vy = -12.5;
-                player.grounded = false;
-                player.fallStartY = player.y;
-                spawnParticles(player.x, player.y + player.h/2, '#888', 5);
+            // Jump
+            if(inputs.jump) {
+                if (player.grounded) {
+                    player.vy = -12.5; player.grounded = false; player.fallStartY = player.y;
+                    spawnParticles(player.x, player.y + player.h/2, '#888', 5);
+                } else if (player.wallSliding) {
+                    player.vy = -12.5; player.vx = player.facing === 1 ? 10 : -10;
+                    player.wallSliding = false;
+                }
             }
 
-            // 6. Attack (Directional)
+            // Attack (Directional + Deflect)
             if(inputs.atk && player.atkCooldown <= 0) {
                 player.atkCooldown = 20;
                 player.animState = 'attack';
+                player.animTimer = 0; // Reset for swipe
                 
-                // Spawn Slash in aim direction
                 let slashX = player.x + Math.cos(player.aimAngle) * 30;
                 let slashY = player.y + Math.sin(player.aimAngle) * 30;
                 spawnSlashVisual(slashX, slashY, player.aimAngle);
                 
-                // Directional Hitbox
-                let hitX = player.x + Math.cos(player.aimAngle) * 40;
-                let hitY = player.y + Math.sin(player.aimAngle) * 40;
-                
+                // Hitbox
+                let hitDist = 45;
+                let dmg = player.buff === 'orange' ? 40 : 20;
+
+                // 1. Enemy Hit
                 enemies.forEach(e => {
-                    let dist = Math.hypot(hitX - e.x, hitY - e.y);
-                    if (dist < 45) { // Hit radius
-                        let dmg = player.buff === 'orange' ? 40 : 20;
-                        e.hp -= dmg;
-                        spawnParticles(e.x, e.y, '#f00', 8);
-                        shake = 6;
+                    if (Math.hypot((player.x + Math.cos(player.aimAngle)*30) - e.x, (player.y + Math.sin(player.aimAngle)*30) - e.y) < hitDist) {
+                        e.hp -= dmg; spawnParticles(e.x, e.y, '#f00', 8); shake = 6;
                     }
                 });
+
+                // 2. Projectile Deflect
+                for(let i=projectiles.length-1; i>=0; i--) {
+                    let p = projectiles[i];
+                    if (Math.hypot((player.x + Math.cos(player.aimAngle)*30) - p.x, (player.y + Math.sin(player.aimAngle)*30) - p.y) < hitDist) {
+                        projectiles.splice(i, 1);
+                        spawnParticles(p.x, p.y, '#fff', 10);
+                        showToast("DEFLECT!", "#0ff");
+                        shake = 3;
+                    }
+                }
             }
             if(player.atkCooldown > 0) player.atkCooldown--;
+            if (player.atkCooldown < 10 && player.animState === 'attack') player.animState = 'idle'; // Reset anim
+
             if(player.invincible > 0) player.invincible--;
             if(player.buffTimer > 0) player.buffTimer--; else player.buff = null;
 
-            // 7. Platforms
+            // Platforms
             let wasGrounded = player.grounded;
             player.grounded = false;
+            player.friction = FRICTION_STONE; // Default
+
             if(player.vy > 0) {
                 platforms.forEach(p => {
                     if(player.x > p.x && player.x < p.x + p.w &&
@@ -455,18 +474,25 @@
                             let fallDist = player.y - player.fallStartY;
                             if (fallDist > FALL_DMG_THRESHOLD && player.buff !== 'green') {
                                 let dmg = Math.floor((fallDist - FALL_DMG_THRESHOLD) / 10);
-                                player.hp -= dmg; shake = 15;
-                                spawnParticles(player.x, p.y, '#fff', 15);
+                                player.hp -= dmg; shake = 15; spawnParticles(player.x, p.y, '#fff', 15);
                                 showToast(`FALL DMG -${dmg}`, "#f44");
                             }
                             player.fallStartY = player.y;
                         }
-                        player.grounded = true; player.vy = 0; player.y = p.y - player.h/2;
+
+                        // Platform Type Logic
+                        if (p.type === 'ice') player.friction = FRICTION_ICE;
+                        if (p.type === 'slime') {
+                            player.vy = -15; // Bounce
+                            spawnParticles(player.x, p.y, '#0f0', 5);
+                        } else {
+                            player.grounded = true; player.vy = 0; player.y = p.y - player.h/2;
+                        }
                     }
                 });
             } else { player.fallStartY = player.y; }
 
-            // 8. Entities
+            // Enemies
             enemies.forEach((e, i) => {
                 if(e.hp <= 0) { enemies.splice(i, 1); return; }
 
@@ -484,6 +510,18 @@
                     }
                 }
 
+                // Interaction
+                // 1. Mario Stomp
+                if (player.vy > 0 && Math.abs(player.x - e.x) < 20 && player.y < e.y - 10 && player.y > e.y - 40) {
+                    enemies.splice(i, 1);
+                    player.vy = -12; // Bounce
+                    spawnParticles(e.x, e.y, '#f00', 10);
+                    showToast("CRUSH!", "#fff");
+                    shake = 5;
+                    return;
+                }
+
+                // 2. Hurt Player
                 if (player.invincible <= 0 && Math.hypot(player.x - e.x, (player.y-10) - e.y) < 25) {
                     if (player.buff === 'blue') {
                         player.buff = null; player.invincible = 30; e.vx *= -3;
@@ -510,7 +548,6 @@
 
             if(player.hp <= 0) { gameActive = false; document.getElementById('game-over').classList.remove('hidden'); document.getElementById('final-depth').innerText = Math.floor(score/10) + "m"; }
             
-            // Camera
             let targetY = player.y - H * 0.4;
             if(targetY > camY) camY = targetY;
             if(player.y > score) score = player.y;
@@ -544,110 +581,91 @@
             for(let i=0;i<n;i++) particles.push({x, y, vx:(Math.random()-0.5)*5, vy:(Math.random()-0.5)*5, life:30, c});
         }
         function spawnSlashVisual(x, y, angle) {
-            particles.push({x, y, type:'slash', life:12, angle: angle, timer:0});
+            particles.push({x, y, type:'slash', life:10, angle: angle, timer:0});
         }
         function getBuffColor(t) { if(t==='red') return '#f44'; if(t==='blue') return '#44f'; if(t==='green') return '#4f4'; return '#fa0'; }
 
         // --- Render ---
+        function drawSprite(ctx, sprite, x, y, size, color) {
+            ctx.fillStyle = color;
+            let rows = sprite.length;
+            let cols = sprite[0].length;
+            let startX = x - (cols * size) / 2;
+            let startY = y - (rows * size) / 2;
+            
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    if(sprite[r][c] === '1') {
+                        ctx.fillRect(startX + c*size, startY + r*size, size, size);
+                    }
+                }
+            }
+        }
+
         function draw() {
-            // Background
             let depthFactor = Math.min(1, score / 15000);
             let r = 20 + (30*depthFactor);
             let b = 50 - (20*depthFactor);
             ctx.fillStyle = `rgb(${r*0.5},20,${b*0.5})`;
             ctx.fillRect(0,0,W,H);
 
-            // Stars
             ctx.fillStyle = "rgba(255,255,255,0.2)";
             bgStars.forEach(s => {
                 let sy = (s.y - camY * 0.5) % H; if(sy<0) sy+=H;
                 ctx.fillRect(s.x, sy, s.s, s.s);
             });
 
-            // Camera Shake
             ctx.save();
             ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake - camY);
 
-            // Draw Curved Walls
             ctx.fillStyle = "#111";
-            ctx.beginPath();
-            
-            // We draw the walls in segments to match curvature
             let startDrawY = Math.floor(camY / 20) * 20;
             for(let y = startDrawY; y < camY + H + 50; y += 20) {
                 let off = getTunnelOffset(y);
                 let cx = (W/2) + off;
-                // Left Wall Block
                 ctx.fillRect(0, y, cx - (WALL_GAP/2), 22);
-                // Right Wall Block
                 ctx.fillRect(cx + (WALL_GAP/2), y, W - (cx + WALL_GAP/2), 22);
             }
 
-            // Platforms (Varied)
             platforms.forEach(p => {
-                // Base
                 if (p.type === 'stone') {
                     ctx.fillStyle = "#222"; ctx.fillRect(p.x, p.y, p.w, p.h);
-                    ctx.fillStyle = "#453"; ctx.fillRect(p.x, p.y, p.w, 4); // Moss
-                } else if (p.type === 'obsidian') {
-                    ctx.fillStyle = "#112"; ctx.fillRect(p.x, p.y, p.w, p.h);
-                    ctx.fillStyle = "#335"; ctx.beginPath(); // Shine
-                    ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+10, p.y); ctx.lineTo(p.x, p.y+10); ctx.fill();
-                } else if (p.type === 'bone') {
-                    ctx.fillStyle = "#ddd"; ctx.fillRect(p.x, p.y, p.w, p.h);
-                    ctx.fillStyle = "#bbb"; ctx.fillRect(p.x+10, p.y+5, p.w-20, p.h-10);
+                    ctx.fillStyle = "#453"; ctx.fillRect(p.x, p.y, p.w, 4);
+                } else if (p.type === 'ice') {
+                    ctx.fillStyle = "#aaf"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = "#fff"; ctx.globalAlpha=0.3; ctx.fillRect(p.x, p.y, p.w, 4); ctx.globalAlpha=1;
+                } else if (p.type === 'slime') {
+                    ctx.fillStyle = "#282"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = "#afa"; ctx.beginPath(); 
+                    for(let k=0; k<p.w; k+=10) { ctx.arc(p.x+k, p.y, 5, 0, Math.PI, true); } ctx.fill();
                 }
             });
 
-            // Monsters (Embellished)
             enemies.forEach(e => {
                 if (e.type === 'crawler') {
-                    // Segmented body
-                    ctx.fillStyle = "#822";
-                    ctx.beginPath(); ctx.arc(e.x, e.y, 8, 0, Math.PI*2); ctx.fill(); // Head
-                    ctx.beginPath(); ctx.arc(e.x - (Math.sign(e.vx)*10), e.y, 6, 0, Math.PI*2); ctx.fill(); // Body
-                    ctx.beginPath(); ctx.arc(e.x - (Math.sign(e.vx)*18), e.y, 4, 0, Math.PI*2); ctx.fill(); // Tail
-                    // Mandibles
-                    ctx.strokeStyle = "#f00"; ctx.lineWidth=1;
-                    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+(Math.sign(e.vx)*12), e.y-5); ctx.stroke();
-                    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+(Math.sign(e.vx)*12), e.y+5); ctx.stroke();
+                    drawSprite(ctx, SPRITE_CRAWLER, e.x, e.y, 4, "#d33");
                 } else if (e.type === 'bat') {
-                    // Jagged Wings
-                    ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = "#400"; // Wing color
-                    let wingFlap = Math.sin(frame*0.4)*15;
-                    ctx.beginPath(); 
-                    ctx.moveTo(e.x, e.y); ctx.lineTo(e.x-20, e.y-10+wingFlap); ctx.lineTo(e.x-10, e.y+10); 
-                    ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+20, e.y-10+wingFlap); ctx.lineTo(e.x+10, e.y+10); 
-                    ctx.fill();
-                    // Glowing Eyes
-                    ctx.fillStyle = "#f00"; ctx.fillRect(e.x-2, e.y-2, 4, 2);
+                    drawSprite(ctx, SPRITE_BAT, e.x, e.y + Math.sin(frame*0.5)*5, 4, "#55d");
                 } else if (e.type === 'sentinel') {
-                    // Floating Eye
-                    ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(e.x, e.y, 14, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = "#f0f"; ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, Math.PI*2); ctx.fill(); // Iris
-                    ctx.strokeStyle = "#505"; ctx.lineWidth=2;
-                    ctx.beginPath(); ctx.arc(e.x, e.y, 20, frame*0.1, frame*0.1 + Math.PI); ctx.stroke(); // Ring
+                    drawSprite(ctx, SPRITE_SENTINEL, e.x, e.y, 4, "#d0d");
                 }
             });
 
-            // Items
             items.forEach(it => {
                 let c = getBuffColor(it.type);
                 ctx.fillStyle = c; ctx.shadowBlur = 10; ctx.shadowColor=c;
                 ctx.beginPath(); ctx.arc(it.x, it.y+Math.sin(frame*0.1)*3, 6, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
             });
 
-            // Particles (Slash)
             particles.forEach((p, i) => {
                 if (p.type === 'slash') {
                     p.life--;
                     ctx.save(); ctx.translate(p.x, p.y); 
-                    ctx.rotate(p.angle); // Rotate to aim
+                    ctx.rotate(p.angle);
                     ctx.beginPath(); 
-                    ctx.arc(0, 0, 40, -Math.PI/4, Math.PI/4); // Arc
+                    ctx.arc(0, 0, 45, -Math.PI/3, Math.PI/3); 
                     ctx.strokeStyle = player.buff==='orange'?"#fa0":"#fff";
-                    ctx.lineWidth = 5 * (p.life/12); 
+                    ctx.lineWidth = 5 * (p.life/10); 
                     ctx.shadowBlur=15; ctx.shadowColor=ctx.strokeStyle;
                     ctx.stroke(); ctx.restore();
                 } else {
@@ -657,20 +675,17 @@
                 if(p.life<=0) particles.splice(i,1);
             });
 
-            // Projectiles
             projectiles.forEach(p => {
                 ctx.fillStyle="#f0f"; ctx.shadowBlur=10; ctx.shadowColor="#f0f";
                 ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
             });
 
-            // Player (HD Human)
             if (player.invincible <= 0 || frame % 4 === 0) {
                 drawHuman(player.x, player.y, player.w, player.h, player.facing, player.animState, player.animTimer, player.aimAngle);
             }
 
             ctx.restore();
 
-            // Vignette
             let rad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, H*0.9);
             rad.addColorStop(0, "transparent");
             rad.addColorStop(1, "rgba(0,0,0,0.6)");
@@ -682,27 +697,29 @@
             ctx.save();
             ctx.translate(x, y);
             
-            // We use aimAngle to drive arm rotation directly
-            // Flip body based on aim direction to look natural
             let renderFacing = Math.abs(aimAngle) > Math.PI/2 ? -1 : 1;
             ctx.scale(renderFacing, 1);
-            
-            // Correct aim angle for flipping
             let localAim = renderFacing === 1 ? aimAngle : Math.PI - aimAngle;
 
-            // Skeleton Setup
-            let headY = -h/2;
-            let neckY = -h/2 + 10;
-            let hipY = 0;
-            let kneeY = 15;
-            let footY = 28;
+            // Arm Swipe Logic
+            // If attacking, override aimAngle with a sweep
+            if (state === 'attack') {
+                // 0 to 20 frames. 
+                // Start: localAim - 0.5 rad
+                // End: localAim + 0.5 rad
+                let progress = timer / 20; // 0 to 1
+                let offset = (progress - 0.5) * 2.0; // -1.0 to 1.0 (approx 60 degrees sweep)
+                localAim += offset;
+            }
 
-            // Leg Animation
-            let legAngle = 0;
-            let bob = 0;
-            if (state === 'run') {
-                legAngle = Math.sin(timer * 0.3) * 0.8;
-                bob = Math.abs(Math.sin(timer * 0.6)) * 2;
+            let headY = -h/2; let neckY = -h/2 + 10; let hipY = 0; let kneeY = 15; let footY = 28;
+            let armAngle = 0; let legAngle = 0; let bob = 0;
+
+            if (state === 'climb') {
+                legAngle = 0.5; // Spread legs
+                armAngle = -2.0; // Arms up holding wall
+            } else if (state === 'run') {
+                legAngle = Math.sin(timer * 0.3) * 0.8; bob = Math.abs(Math.sin(timer * 0.6)) * 2;
             } else if (state === 'jump') {
                 legAngle = 0.5;
             } else if (state === 'fall') {
@@ -711,19 +728,27 @@
                 bob = Math.sin(timer * 0.1) * 1;
             }
 
-            // Draw Style
             ctx.strokeStyle = "#fff"; ctx.lineCap = "round"; ctx.lineJoin = "round";
 
             // Back Leg
             ctx.lineWidth = 6; ctx.strokeStyle = "#555"; 
             ctx.beginPath(); ctx.moveTo(0, hipY+bob); 
-            ctx.lineTo(-Math.sin(legAngle)*10, kneeY+bob); 
-            ctx.lineTo(-Math.sin(legAngle)*15, footY+bob); ctx.stroke();
+            if (state === 'climb') {
+                 ctx.lineTo(10, kneeY+bob); ctx.lineTo(15, footY+bob); // Braced
+            } else {
+                ctx.lineTo(-Math.sin(legAngle)*10, kneeY+bob); ctx.lineTo(-Math.sin(legAngle)*15, footY+bob);
+            }
+            ctx.stroke();
 
-            // Back Arm (Idle)
+            // Back Arm
             ctx.lineWidth = 5; ctx.beginPath(); 
             ctx.moveTo(0, neckY+5+bob); 
-            ctx.lineTo(-5, neckY+15+bob); ctx.lineTo(-10, neckY+25+bob); ctx.stroke();
+            if (state === 'climb') {
+                ctx.lineTo(-10, neckY-5+bob); ctx.lineTo(-15, neckY-15+bob);
+            } else {
+                ctx.lineTo(-5, neckY+15+bob); ctx.lineTo(-10, neckY+25+bob); 
+            }
+            ctx.stroke();
 
             // Torso
             ctx.fillStyle = "#1e2840"; 
@@ -738,34 +763,42 @@
             // Front Leg
             ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; 
             ctx.beginPath(); ctx.moveTo(0, hipY+bob); 
-            ctx.lineTo(Math.sin(legAngle)*10, kneeY+bob); 
-            ctx.lineTo(Math.sin(legAngle)*15, footY+bob); ctx.stroke();
+            if (state === 'climb') {
+                 ctx.lineTo(8, kneeY+bob-5); ctx.lineTo(15, footY+bob-5); // Braced high
+            } else {
+                ctx.lineTo(Math.sin(legAngle)*10, kneeY+bob); ctx.lineTo(Math.sin(legAngle)*15, footY+bob);
+            }
+            ctx.stroke();
 
-            // Front Arm (AIMING ARM)
+            // Front Arm (AIMING/CLIMBING)
             let shoulderX = 0; let shoulderY = neckY + 5 + bob;
-            // IK for arm based on Local Aim
-            let armLen = 22;
-            let handX = Math.cos(localAim) * armLen;
-            let handY = Math.sin(localAim) * armLen;
             
-            // Elbow approx
-            let elbowX = handX / 2; 
-            let elbowY = handY / 2 + 5; // Sag slightly
+            if (state === 'climb') {
+                 // Climbing arm
+                 ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); 
+                 ctx.lineTo(12, shoulderY-10); ctx.lineTo(18, shoulderY-20); ctx.stroke();
+            } else {
+                // IK/Aiming arm
+                let armLen = 22;
+                let handX = Math.cos(localAim) * armLen;
+                let handY = Math.sin(localAim) * armLen;
+                let elbowX = handX / 2; let elbowY = handY / 2 + 5; 
 
-            ctx.lineWidth = 5; ctx.strokeStyle = "#fff";
-            ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); 
-            ctx.lineTo(shoulderX + elbowX, shoulderY + elbowY); 
-            ctx.lineTo(shoulderX + handX, shoulderY + handY); ctx.stroke();
+                ctx.lineWidth = 5; ctx.strokeStyle = "#fff";
+                ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); 
+                ctx.lineTo(shoulderX + elbowX, shoulderY + elbowY); 
+                ctx.lineTo(shoulderX + handX, shoulderY + handY); ctx.stroke();
 
-            // Sword
-            ctx.save();
-            ctx.translate(shoulderX + handX, shoulderY + handY);
-            ctx.rotate(localAim + 1.5); // Perpendicular to arm
-            ctx.fillStyle = "#d4af37"; ctx.fillRect(-2, -2, 4, 8); 
-            ctx.fillStyle = (player.buff === 'orange') ? "#ffaa00" : "#00ffff"; 
-            ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-            ctx.fillRect(-1, -30, 2, 30);
-            ctx.restore();
+                // Sword
+                ctx.save();
+                ctx.translate(shoulderX + handX, shoulderY + handY);
+                ctx.rotate(localAim + 1.5); 
+                ctx.fillStyle = "#d4af37"; ctx.fillRect(-2, -2, 4, 8); 
+                ctx.fillStyle = (player.buff === 'orange') ? "#ffaa00" : "#00ffff"; 
+                ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
+                ctx.fillRect(-1, -30, 2, 30);
+                ctx.restore();
+            }
 
             if (player.buff === 'blue') {
                 ctx.strokeStyle = "#44f"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 35, 0, Math.PI*2); ctx.stroke();
