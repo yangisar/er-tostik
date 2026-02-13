@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Er Tostik: Warrior's Descent</title>
+    <title>Er Tostik: Deep Descent</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
 
@@ -23,7 +23,7 @@
             height: 100vh;
         }
 
-        /* UI Overlay */
+        /* UI Layer */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -42,11 +42,18 @@
             display: flex;
             justify-content: space-between;
             color: #d4af37;
-            font-size: 1.2rem;
+            font-size: 1rem;
             text-shadow: 0 0 5px #000;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
         }
 
-        /* Bottom Controls Container */
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        /* Controls */
         .controls-area {
             height: 180px;
             width: 100%;
@@ -54,11 +61,10 @@
             justify-content: space-between;
             padding: 20px;
             box-sizing: border-box;
-            pointer-events: auto; /* Enable touch here */
+            pointer-events: auto;
             padding-bottom: 40px;
         }
 
-        /* Buttons */
         .btn-circle {
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid rgba(212, 175, 55, 0.5);
@@ -70,6 +76,7 @@
             font-size: 1.5rem;
             backdrop-filter: blur(4px);
             touch-action: manipulation;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
         .btn-circle:active {
@@ -77,66 +84,50 @@
             transform: scale(0.95);
         }
 
-        /* Left Side (Movement) */
-        .d-pad {
-            display: flex;
-            gap: 15px;
-            align-items: flex-end;
-        }
-        .btn-move {
-            width: 70px;
-            height: 70px;
-            font-size: 2rem;
-        }
+        .d-pad { display: flex; gap: 15px; align-items: flex-end; }
+        .btn-move { width: 70px; height: 70px; font-size: 2rem; }
 
-        /* Right Side (Combat) */
-        .action-pad {
-            display: flex;
-            gap: 15px;
-            align-items: flex-end;
-        }
-        .btn-atk {
-            width: 90px;
-            height: 90px;
-            font-size: 2.5rem;
-            border-color: #ff4444;
-            color: #ff4444;
-        }
-        .btn-jump {
-            width: 60px;
-            height: 60px;
-            margin-bottom: 10px;
-        }
+        .action-pad { display: flex; gap: 15px; align-items: flex-end; }
+        .btn-atk { width: 90px; height: 90px; font-size: 2.5rem; border-color: #ff4444; color: #ff4444; }
+        .btn-jump { width: 60px; height: 60px; margin-bottom: 10px; }
 
-        /* Game Over / Start */
+        /* Screens */
         .screen-overlay {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(5, 5, 10, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
             color: #d4af37;
             pointer-events: auto;
             z-index: 10;
+            text-align: center;
         }
         .hidden { display: none !important; }
         
-        h1 { margin: 0 0 10px 0; font-size: 2rem; }
-        p { color: #aaa; max-width: 80%; text-align: center; margin-bottom: 30px; }
+        h1 { margin: 0 0 10px 0; font-size: 2rem; color: #fff; text-shadow: 0 0 10px #00ffff; }
+        p { color: #aaa; max-width: 80%; margin-bottom: 30px; line-height: 1.4; }
         
         .main-btn {
             padding: 15px 40px;
             border: 2px solid #d4af37;
-            background: transparent;
+            background: rgba(212, 175, 55, 0.1);
             color: #d4af37;
             font-family: 'Cinzel', serif;
             font-size: 1.2rem;
             text-transform: uppercase;
+            cursor: pointer;
+        }
+        .toast {
+            position: absolute;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            font-size: 1.5rem;
+            color: #fff;
+            text-shadow: 0 0 10px #fff;
+            opacity: 0;
+            transition: opacity 0.5s;
         }
     </style>
 </head>
@@ -146,9 +137,17 @@
 
     <div id="ui-layer">
         <div class="hud-top">
-            <div id="score">Depth: 0m</div>
-            <div id="health">HP: 100</div>
+            <div class="stat-box">
+                <div id="score">Depth: 0m</div>
+                <div id="armor-display" style="color: #aaa; font-size: 0.8rem;">Armor: 0</div>
+            </div>
+            <div class="stat-box" style="align-items: flex-end;">
+                <div id="health">HP: 100</div>
+                <div id="weapon-display" style="color: #00ffff; font-size: 0.8rem;">Blade: Normal</div>
+            </div>
         </div>
+
+        <div id="msg-toast" class="toast">ITEM ACQUIRED</div>
 
         <div class="controls-area">
             <div class="d-pad">
@@ -164,15 +163,15 @@
 
     <div id="start-screen" class="screen-overlay">
         <h1>ER TOSTIK</h1>
-        <p>The Underworld Awaits.</p>
-        <p>Use arrows to Move.<br>Sword to slay Shadows.<br>Descend to find the lost.</p>
-        <button class="main-btn" onclick="initGame()">Enter</button>
+        <p>The Spirits guide you.</p>
+        <p>Sides are blocked.<br>Fall on enemies to crush them.<br>Find flasks and ancient steel.</p>
+        <button class="main-btn" onclick="initGame()">Descend</button>
     </div>
 
     <div id="game-over-screen" class="screen-overlay hidden">
-        <h1 style="color:#ff4444">DEFEATED</h1>
+        <h1 style="color:#ff4444">SPIRIT BROKEN</h1>
         <p id="final-score">Depth: 0m</p>
-        <button class="main-btn" onclick="initGame()">Revive</button>
+        <button class="main-btn" onclick="initGame()">Rise Again</button>
     </div>
 
     <script>
@@ -183,13 +182,13 @@
         let width, height;
         const GRAVITY = 0.6;
         const FRICTION = 0.8;
-        const MOVE_SPEED = 5;
-        const JUMP_FORCE = -12;
+        const MOVE_SPEED = 6;
+        const JUMP_FORCE = -14;
         
         // --- State ---
         let gameRunning = false;
         let cameraY = 0;
-        let score = 0;
+        let maxDepth = 0;
         let inputs = { left: false, right: false, jump: false, attack: false };
         let particles = [];
         
@@ -198,7 +197,11 @@
             x: 0, y: 0, w: 20, h: 40,
             vx: 0, vy: 0,
             hp: 100,
-            facing: 1, // 1 right, -1 left
+            maxHp: 100,
+            armor: 0,
+            attackRange: 40,
+            attackLevel: 1,
+            facing: 1, 
             attackCooldown: 0,
             isAttacking: false,
             grounded: false,
@@ -207,8 +210,9 @@
 
         let platforms = [];
         let enemies = [];
+        let items = [];
 
-        // --- Input Handling (Touch & Mouse) ---
+        // --- Input Handling ---
         const bindBtn = (id, key) => {
             const el = document.getElementById(id);
             const start = (e) => { e.preventDefault(); inputs[key] = true; };
@@ -217,18 +221,16 @@
             el.addEventListener('mouseup', end);
             el.addEventListener('touchstart', start);
             el.addEventListener('touchend', end);
-            el.addEventListener('mouseleave', end);
         };
 
         bindBtn('btn-left', 'left');
         bindBtn('btn-right', 'right');
         
-        // Jump trigger
         const jumpBtn = document.getElementById('btn-jump');
-        jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if(player.grounded) player.vy = JUMP_FORCE; });
-        jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if(player.grounded) player.vy = JUMP_FORCE; });
+        const doJump = (e) => { e.preventDefault(); if(player.grounded) player.vy = JUMP_FORCE; };
+        jumpBtn.addEventListener('touchstart', doJump);
+        jumpBtn.addEventListener('mousedown', doJump);
 
-        // Attack trigger
         const atkBtn = document.getElementById('btn-atk');
         const doAttack = (e) => {
             e.preventDefault();
@@ -241,7 +243,7 @@
         atkBtn.addEventListener('touchstart', doAttack);
         atkBtn.addEventListener('mousedown', doAttack);
 
-        // Keyboard support for desktop testing
+        // Keyboard
         window.addEventListener('keydown', e => {
             if(e.key === 'ArrowLeft') inputs.left = true;
             if(e.key === 'ArrowRight') inputs.right = true;
@@ -264,6 +266,14 @@
         window.addEventListener('resize', resize);
         resize();
 
+        function showToast(msg, color) {
+            const t = document.getElementById('msg-toast');
+            t.innerText = msg;
+            t.style.color = color;
+            t.style.opacity = 1;
+            setTimeout(() => t.style.opacity = 0, 1500);
+        }
+
         function initGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-over-screen').classList.add('hidden');
@@ -273,15 +283,19 @@
             player.vx = 0; 
             player.vy = 0;
             player.hp = 100;
+            player.armor = 0;
+            player.attackLevel = 1;
+            player.attackRange = 40;
             cameraY = 0;
-            score = 0;
+            maxDepth = 0;
             
             platforms = [];
             enemies = [];
+            items = [];
             particles = [];
             
-            // Initial Platform
-            platforms.push({x: width/2 - 100, y: 200, w: 200, h: 20});
+            // Start Platform
+            createPlatform(width/2 - 100, 200, 200);
             
             // Generate world ahead
             generateWorld(200, 2000);
@@ -290,49 +304,77 @@
             requestAnimationFrame(gameLoop);
         }
 
+        function createPlatform(x, y, w) {
+            // Generate jagged edges for natural look
+            let points = [];
+            let segments = 10;
+            let segmentWidth = w / segments;
+            for(let i=0; i<=segments; i++) {
+                points.push({
+                    x: x + (i * segmentWidth),
+                    y: y + (Math.random() * 10 - 5) // Roughness
+                });
+            }
+            platforms.push({x, y, w, h: 30, points: points});
+        }
+
         function generateWorld(startY, endY) {
             let y = startY;
             while(y < endY) {
-                y += 100 + Math.random() * 100; // Gap between platforms
+                y += 80 + Math.random() * 120; // Vertical Gap
                 let w = 100 + Math.random() * 150;
                 let x = Math.random() * (width - w);
                 
-                platforms.push({x, y, w, h: 20});
+                createPlatform(x, y, w);
 
-                // Add Enemy Chance (30%)
-                if (Math.random() < 0.3) {
+                // Add Enemy (Increasing chance with depth)
+                if (Math.random() < 0.4) {
                     enemies.push({
                         x: x + w/2,
-                        y: y - 30,
+                        y: y - 40,
                         w: 30, h: 30,
                         patrolStart: x,
                         patrolEnd: x + w,
                         vx: 1 + Math.random(),
-                        hp: 1
+                        hp: 1,
+                        type: 'shadow'
+                    });
+                }
+
+                // Add Item (10% chance)
+                if (Math.random() < 0.15) {
+                    let type = Math.random();
+                    let itemType = 'health';
+                    if (type > 0.6) itemType = 'armor';
+                    if (type > 0.9) itemType = 'weapon';
+                    
+                    items.push({
+                        x: x + w/2,
+                        y: y - 30,
+                        type: itemType,
+                        bobOffset: Math.random() * 10
                     });
                 }
             }
         }
 
         function checkCombat() {
-            // Create Hitbox in front of player
-            let hitX = player.x + (player.facing * 30);
+            let hitX = player.x + (player.facing * (20 + player.attackRange/2));
             let hitY = player.y;
-            let range = 50;
-
+            
             // Visual Slash
-            for(let i=0; i<5; i++) createParticle(hitX, hitY, '#fff', 5);
+            for(let i=0; i<8; i++) createParticle(hitX, hitY, '#00ffff', 6);
 
             enemies.forEach((en, i) => {
                 let dx = en.x - player.x;
-                let dy = en.y - player.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
+                let dy = en.y - en.y; // Height diff negligible for simple hitbox
+                let dist = Math.sqrt(Math.pow(en.x - player.x, 2) + Math.pow(en.y - player.y, 2));
                 
-                // If enemy is in front and close
-                if (dist < range && Math.sign(dx) === player.facing) {
+                // Attack Hit Logic
+                if (dist < player.attackRange + 20 && Math.sign(dx) === player.facing) {
                     en.hp--;
                     // Blood effect
-                    for(let k=0; k<10; k++) createParticle(en.x, en.y, '#ff0000', 3);
+                    for(let k=0; k<10; k++) createParticle(en.x, en.y, '#ff0000', 4);
                 }
             });
         }
@@ -350,18 +392,21 @@
             if (!gameRunning) return;
 
             // --- Player Physics ---
-            if (inputs.left) { player.vx -= 0.5; player.facing = -1; }
-            if (inputs.right) { player.vx += 0.5; player.facing = 1; }
+            if (inputs.left) { player.vx -= 0.8; player.facing = -1; }
+            if (inputs.right) { player.vx += 0.8; player.facing = 1; }
             
             player.vx *= FRICTION;
             player.vy += GRAVITY;
             
-            // Max speed cap
+            // Limit horizontal speed
             if(player.vx > MOVE_SPEED) player.vx = MOVE_SPEED;
             if(player.vx < -MOVE_SPEED) player.vx = -MOVE_SPEED;
 
             player.x += player.vx;
             player.y += player.vy;
+
+            // ** BOUNDARIES ** if (player.x < 0) { player.x = 0; player.vx = 0; }
+            if (player.x > width) { player.x = width; player.vx = 0; }
 
             // Cooldowns
             if (player.attackCooldown > 0) player.attackCooldown--;
@@ -373,16 +418,16 @@
             
             // Platform Collision
             platforms.forEach(p => {
-                // Check if falling onto platform
+                // Check if feet interact with platform top
                 if (player.vy > 0 && 
-                    player.y + player.h/2 >= p.y && 
-                    player.y + player.h/2 <= p.y + p.h + player.vy && // +player.vy prevents tunneling
+                    player.y + 20 >= p.y - 10 && 
+                    player.y + 20 <= p.y + 20 && 
                     player.x >= p.x && 
                     player.x <= p.x + p.w) {
                         
                     player.grounded = true;
                     player.vy = 0;
-                    player.y = p.y - player.h/2;
+                    player.y = p.y - 20; // Place on top
                 }
             });
 
@@ -390,8 +435,9 @@
             for (let i = enemies.length - 1; i >= 0; i--) {
                 let en = enemies[i];
                 
-                // Dead?
                 if (en.hp <= 0) {
+                    // Loot drop chance on kill (30%)
+                    if(Math.random() < 0.3) items.push({x: en.x, y: en.y, type: 'health', bobOffset:0});
                     enemies.splice(i, 1);
                     continue;
                 }
@@ -405,12 +451,47 @@
                 let dy = player.y - en.y;
                 let dist = Math.sqrt(dx*dx + dy*dy);
                 
-                if (dist < 30 && player.invincible <= 0) {
-                    player.hp -= 20;
-                    player.invincible = 60; // 1 second i-frame
-                    player.vy = -5; // Knockback
-                    player.vx = -Math.sign(dx) * 5;
-                    createParticle(player.x, player.y, '#d4af37', 5);
+                if (dist < 35) {
+                    // ** STOMP MECHANIC **
+                    // If player is falling and is above enemy
+                    if (player.vy > 2 && player.y < en.y - 10) {
+                        en.hp = 0;
+                        player.vy = -8; // Bounce up
+                        createParticle(en.x, en.y, '#fff', 8); // Smash effect
+                        showToast("CRUSHED!", "#fff");
+                    } 
+                    // Getting Hurt
+                    else if (player.invincible <= 0) {
+                        let dmg = 20 - player.armor;
+                        if (dmg < 5) dmg = 5;
+                        player.hp -= dmg;
+                        player.invincible = 60;
+                        player.vy = -5;
+                        player.vx = -Math.sign(dx) * 8;
+                        createParticle(player.x, player.y, '#ff0000', 5);
+                    }
+                }
+            }
+
+            // Item Logic
+            for (let i = items.length - 1; i >= 0; i--) {
+                let it = items[i];
+                let dist = Math.hypot(player.x - it.x, player.y - it.y);
+                
+                if (dist < 30) {
+                    // Pickup
+                    if (it.type === 'health') {
+                        player.hp = Math.min(100, player.hp + 30);
+                        showToast("HEALTH +30", "#ff4444");
+                    } else if (it.type === 'armor') {
+                        player.armor = Math.min(15, player.armor + 5);
+                        showToast("ARMOR UP", "#ffd700");
+                    } else if (it.type === 'weapon') {
+                        player.attackLevel++;
+                        player.attackRange += 10;
+                        showToast("BLADE SHARPENED", "#00ffff");
+                    }
+                    items.splice(i, 1);
                 }
             }
 
@@ -418,29 +499,23 @@
             if (player.hp <= 0) {
                 gameRunning = false;
                 document.getElementById('game-over-screen').classList.remove('hidden');
-                document.getElementById('final-score').innerText = `Depth: ${Math.floor(score)}m`;
+                document.getElementById('final-score').innerText = `Depth: ${Math.floor(maxDepth)}m`;
             }
 
-            // --- Camera & World Gen ---
-            // Camera follows player vertically, but never goes UP (only descent)
-            // Center the player on screen vertically
+            // --- Camera & Gen ---
             let targetCamY = player.y - height * 0.4;
-            if (targetCamY > cameraY) {
-                cameraY = targetCamY; // Camera only moves down
-            }
+            if (targetCamY > cameraY) cameraY = targetCamY;
+            if (player.y > maxDepth) maxDepth = player.y;
 
-            // Score tracks deepest point
-            if (player.y > score) score = player.y;
-
-            // Generate more world as we fall
             let deepestPlatform = platforms[platforms.length-1].y;
             if (deepestPlatform < cameraY + height * 2) {
                 generateWorld(deepestPlatform, deepestPlatform + 1000);
             }
 
-            // Cleanup old objects
+            // Cleanup
             if (platforms[0].y < cameraY - 100) platforms.shift();
             enemies = enemies.filter(e => e.y > cameraY - 100);
+            items = items.filter(i => i.y > cameraY - 100);
 
             // Particles
             particles.forEach((p, i) => {
@@ -450,125 +525,148 @@
                 if(p.life <= 0) particles.splice(i, 1);
             });
 
-            // UI Update
-            document.getElementById('score').innerText = `Depth: ${Math.floor(score/10)}m`;
+            // UI
+            document.getElementById('score').innerText = `Depth: ${Math.floor(maxDepth/10)}m`;
             document.getElementById('health').innerText = `HP: ${player.hp}`;
+            document.getElementById('armor-display').innerText = `Armor: ${player.armor}`;
+            let wpnTxt = player.attackLevel === 1 ? "Rusty" : (player.attackLevel === 2 ? "Forged" : "Spirit");
+            document.getElementById('weapon-display').innerText = `Blade: ${wpnTxt}`;
         }
 
-        function drawHuman(ctx, x, y, facing, isAttacking) {
-            ctx.save();
-            ctx.translate(x, y);
+        // --- Drawing ---
+
+        function drawEnvironment() {
+            // Background Gradient based on depth
+            let depthFactor = Math.min(1, maxDepth / 10000);
+            let r = 5 + (depthFactor * 40); // Becomes slightly redder
+            let b = 16 - (depthFactor * 10); // Loses blue
             
-            // Color logic (blink red if hurt)
-            ctx.fillStyle = player.invincible > 0 && Math.floor(Date.now()/50)%2==0 ? "red" : "#000";
-            ctx.strokeStyle = ctx.fillStyle;
+            let bg = ctx.createLinearGradient(0, 0, 0, height);
+            bg.addColorStop(0, `rgb(${r}, 5, ${b})`);
+            bg.addColorStop(1, `rgb(${r*2}, 10, ${b*2})`);
             
-            // Head
-            ctx.beginPath();
-            ctx.arc(0, -15, 6, 0, Math.PI*2);
-            ctx.fill();
+            ctx.fillStyle = bg;
+            ctx.fillRect(0, 0, width, height);
+        }
 
-            // Body
-            ctx.fillRect(-4, -10, 8, 20);
-
-            // Legs (simple animation)
-            if (Math.abs(player.vx) > 0.1 && player.grounded) {
-                let legOffset = Math.sin(Date.now() / 50) * 5;
-                ctx.beginPath();
-                ctx.moveTo(-2, 10); ctx.lineTo(-5 + legOffset, 20);
-                ctx.moveTo(2, 10); ctx.lineTo(5 - legOffset, 20);
-                ctx.stroke();
-            } else {
-                ctx.beginPath();
-                ctx.moveTo(-2, 10); ctx.lineTo(-2, 20);
-                ctx.moveTo(2, 10); ctx.lineTo(2, 20);
-                ctx.stroke();
-            }
-
-            // Sword Arm
-            ctx.save();
-            ctx.translate(0, -5); // Shoulder
-            if (isAttacking) {
-                ctx.rotate(facing * Math.PI / 2); // Swing down
-            } else {
-                ctx.rotate(facing * -Math.PI / 4); // Idle hold
-            }
-            
-            // Arm
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(0,0);
-            ctx.lineTo(10 * facing, 0);
-            ctx.stroke();
-
-            // Sword
-            ctx.strokeStyle = "#d4af37"; // Gold sword
+        function drawPlatforms() {
+            ctx.fillStyle = "#1a1a2e";
+            ctx.strokeStyle = "#3e3e5e";
             ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(10 * facing, 0);
-            ctx.lineTo(35 * facing, 0);
-            ctx.stroke();
-            ctx.restore();
 
-            ctx.restore();
+            platforms.forEach(p => {
+                ctx.beginPath();
+                let pts = p.points;
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                
+                ctx.lineTo(p.x + p.w, p.y + p.h);
+                ctx.lineTo(p.x, p.y + p.h);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Draw just top jagged line highlight
+                ctx.beginPath();
+                ctx.moveTo(pts[0].x, pts[0].y);
+                for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+                ctx.stroke();
+            });
         }
 
-        function drawEnemy(ctx, e) {
+        function drawItems() {
+            items.forEach(it => {
+                let y = it.y + Math.sin((Date.now() / 200) + it.bobOffset) * 5;
+                
+                if (it.type === 'health') {
+                    ctx.fillStyle = "#ff0000";
+                    ctx.beginPath(); ctx.arc(it.x, y, 6, 0, Math.PI*2); ctx.fill();
+                    // Cross
+                    ctx.fillStyle = "#fff";
+                    ctx.fillRect(it.x-2, y-6, 4, 12); ctx.fillRect(it.x-6, y-2, 12, 4);
+                } else if (it.type === 'armor') {
+                    ctx.fillStyle = "#ffd700";
+                    ctx.beginPath(); ctx.moveTo(it.x, y+8); ctx.lineTo(it.x+7, y-5); ctx.lineTo(it.x-7, y-5); ctx.fill();
+                } else {
+                    ctx.fillStyle = "#00ffff";
+                    ctx.fillRect(it.x-2, y-10, 4, 20);
+                }
+            });
+        }
+
+        function drawPlayer() {
             ctx.save();
-            ctx.translate(e.x, e.y);
+            ctx.translate(player.x, player.y);
             
-            // Smoky effect
+            // ** VISUAL CONTRAST **
+            // Glow behind player
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "cyan";
+            
+            // I-Frame blink
+            if (player.invincible > 0 && Math.floor(Date.now()/50)%2==0) ctx.globalAlpha = 0.5;
+
+            // Body (White/Cyan Spirit Form)
+            ctx.fillStyle = "#e0ffff";
+            ctx.beginPath(); ctx.arc(0, -15, 8, 0, Math.PI*2); ctx.fill(); // Head
+            ctx.fillRect(-5, -8, 10, 24); // Torso
+
+            // Animated Legs
+            if (!player.grounded) {
+                // Falling pose
+                ctx.fillRect(-6, 12, 4, 10); ctx.fillRect(2, 8, 4, 8);
+            } else if (Math.abs(player.vx) > 0.5) {
+                // Running
+                let leg = Math.sin(Date.now() / 60) * 8;
+                ctx.fillRect(-6 + leg, 12, 4, 12);
+                ctx.fillRect(2 - leg, 12, 4, 12);
+            } else {
+                // Idle
+                ctx.fillRect(-6, 12, 4, 12); ctx.fillRect(2, 12, 4, 12);
+            }
+
+            // Weapon
+            ctx.save();
+            ctx.translate(0, -5);
+            let angle = player.isAttacking ? (player.facing * Math.PI/2) : (player.facing * -0.2);
+            ctx.rotate(angle);
+            
+            // Sword Glow
             ctx.shadowBlur = 10;
-            ctx.shadowColor = "#800080";
-            ctx.fillStyle = "#200020";
+            ctx.shadowColor = player.attackLevel > 1 ? "#00ffff" : "#fff";
+            ctx.fillStyle = player.attackLevel > 1 ? "#00ffff" : "#aaa";
             
-            // Shape
-            ctx.beginPath();
-            ctx.arc(0, 0, 15, 0, Math.PI*2);
-            ctx.fill();
-            
-            // Eyes
-            ctx.fillStyle = "#ff0000";
-            ctx.shadowBlur = 5;
-            ctx.shadowColor = "#ff0000";
-            let lookDir = Math.sign(e.vx);
-            ctx.fillRect(lookDir*5, -5, 4, 4);
+            ctx.fillRect(0, -2, player.attackRange, 4); // Blade
+            ctx.fillStyle = "#d4af37";
+            ctx.fillRect(0, -4, 4, 8); // Hilt
+            ctx.restore();
 
             ctx.restore();
         }
 
         function draw() {
-            // Background Clear
-            ctx.fillStyle = "#050510";
-            ctx.fillRect(0, 0, width, height);
+            drawEnvironment();
             
             ctx.save();
-            // Apply Camera
             ctx.translate(0, -cameraY);
 
-            // Draw Platforms
-            ctx.fillStyle = "#1a1a2e";
-            platforms.forEach(p => {
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-                // Gold trim
-                ctx.fillStyle = "#333";
-                ctx.fillRect(p.x, p.y, p.w, 3);
-                ctx.fillStyle = "#1a1a2e";
+            drawPlatforms();
+            drawItems();
+
+            enemies.forEach(e => {
+                ctx.fillStyle = "#000"; // Silhouette
+                ctx.shadowBlur = 5; ctx.shadowColor = "#f0f";
+                ctx.beginPath(); ctx.arc(e.x, e.y, 12, 0, Math.PI*2); ctx.fill();
+                // Red Eyes
+                ctx.fillStyle = "red"; ctx.shadowBlur = 0;
+                ctx.fillRect(e.x + (Math.sign(e.vx)*4), e.y - 4, 4, 2);
             });
 
-            // Draw Enemies
-            enemies.forEach(e => drawEnemy(ctx, e));
+            drawPlayer();
 
-            // Draw Player
-            drawHuman(ctx, player.x, player.y, player.facing, player.isAttacking);
-
-            // Draw Particles
             particles.forEach(p => {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.col;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
-                ctx.fill();
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
             });
             ctx.globalAlpha = 1;
 
