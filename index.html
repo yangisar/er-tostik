@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Er Tostik: Definitive Edition</title>
+    <title>Er Tostik: Precision Combat</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
 
@@ -16,11 +16,7 @@
             font-family: 'Cinzel', serif;
         }
 
-        canvas {
-            display: block;
-            width: 100%;
-            height: 100vh;
-        }
+        canvas { display: block; width: 100%; height: 100vh; }
 
         #ui-layer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -31,7 +27,7 @@
         /* HUD */
         .hud-panel {
             padding: 20px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
             color: #d4af37;
             text-shadow: 0 2px 4px #000;
             display: flex; justify-content: space-between; align-items: flex-start;
@@ -43,7 +39,7 @@
         }
         .hp-fill { 
             height: 100%; background: linear-gradient(90deg, #8a0e0e, #ff3333); 
-            width: 100%; transition: width 0.2s; 
+            width: 100%; transition: width 0.1s; 
         }
 
         .flask-slot {
@@ -68,15 +64,16 @@
         /* Joystick */
         .stick-zone { width: 45%; height: 100%; position: relative; }
         .stick-base {
-            position: absolute; width: 80px; height: 80px;
+            position: absolute; width: 90px; height: 90px;
             border: 2px solid rgba(255,255,255,0.1);
             background: rgba(255,255,255,0.05);
             border-radius: 50%; display: none; pointer-events: none;
+            backdrop-filter: blur(2px);
         }
         .stick-knob {
             position: absolute; width: 40px; height: 40px;
             background: rgba(212, 175, 55, 0.8);
-            border-radius: 50%; top: 20px; left: 20px;
+            border-radius: 50%; top: 25px; left: 25px;
             pointer-events: none;
             box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
         }
@@ -85,27 +82,27 @@
         .btn-zone {
             width: 50%; height: 100%;
             display: flex; justify-content: flex-end; align-items: flex-end;
-            gap: 25px;
+            gap: 20px;
         }
         .action-btn {
-            width: 85px; height: 85px;
+            width: 90px; height: 90px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             backdrop-filter: blur(5px);
-            color: #fff; font-size: 1.8rem;
+            color: #fff; font-size: 2rem;
             display: flex; justify-content: center; align-items: center;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         }
         .action-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.2); }
         
-        #btn-atk { border-color: #ff4444; color: #ff4444; margin-bottom: 30px; }
-        #btn-jump { border-color: #44ff44; color: #44ff44; }
+        #btn-atk { border-color: #ff4444; color: #ff4444; margin-bottom: 40px; margin-right: 10px; }
+        #btn-jump { border-color: #44ff44; color: #44ff44; width: 70px; height: 70px; font-size: 1.5rem; margin-bottom: 10px; }
 
         /* Screens */
         .overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5,5,8,0.95);
+            background: rgba(5,5,8,0.96);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             z-index: 20; color: #d4af37; text-align: center;
         }
@@ -133,7 +130,7 @@
     <div id="ui-layer">
         <div class="hud-panel">
             <div>
-                <div style="font-size: 0.7rem; color:#aaa; margin-bottom:4px;">VITALITY</div>
+                <div style="font-size: 0.7rem; color:#aaa; margin-bottom:4px;">HEALTH</div>
                 <div class="bar-wrap"><div id="hp-bar" class="hp-fill"></div></div>
                 <div class="flask-slot">
                     <div id="buff-icon" class="flask-icon"></div>
@@ -161,7 +158,12 @@
 
     <div id="start-screen" class="overlay">
         <h1 style="font-size: 3rem; margin-bottom: 0; text-shadow: 0 0 20px cyan;">ER TOSTIK</h1>
-        <p style="color: #888; letter-spacing: 3px; margin-top:5px;">DEFINITIVE EDITION</p>
+        <p style="color: #888; letter-spacing: 3px; margin-top:5px;">PRECISION COMBAT</p>
+        <p style="font-size: 0.8rem; color:#666; max-width: 300px; margin-top: 20px;">
+            Use Joystick to AIM sword.<br>
+            The Abyss winds left and right.<br>
+            Watch your fall speed.
+        </p>
         <button class="menu-btn" onclick="startGame()">Descend</button>
     </div>
 
@@ -179,7 +181,7 @@
         let W, H;
         const GRAVITY = 0.5;
         const FRICTION = 0.85;
-        const WALL_WIDTH = 40;
+        const WALL_GAP = 300; // Width of the tunnel
         const FALL_DMG_THRESHOLD = 450;
         
         // --- State ---
@@ -188,14 +190,15 @@
         let score = 0;
         let frame = 0;
         let shake = 0;
-        let inputs = { x: 0, jump: false, atk: false };
+        let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false };
 
         // --- Objects ---
         let player = {
-            x: 0, y: 0, w: 20, h: 55, // HD Proportions
+            x: 0, y: 0, w: 20, h: 55,
             vx: 0, vy: 0,
             hp: 100, maxHp: 100,
             facing: 1,
+            aimAngle: 0, // NEW: Aiming angle in radians
             grounded: false,
             fallStartY: 0,
             animState: 'idle',
@@ -227,9 +230,10 @@
             
             let rect = stickZone.getBoundingClientRect();
             stickBase.style.display = 'block';
-            stickBase.style.left = (startX - rect.left - 40) + 'px';
-            stickBase.style.top = (startY - rect.top - 40) + 'px';
+            stickBase.style.left = (startX - rect.left - 45) + 'px';
+            stickBase.style.top = (startY - rect.top - 45) + 'px';
             stickKnob.style.transform = `translate(0px, 0px)`;
+            inputs.activeStick = true;
         }, {passive: false});
 
         stickZone.addEventListener('touchmove', e => {
@@ -240,15 +244,22 @@
                     let dx = t.clientX - startX;
                     let dy = t.clientY - startY;
                     let dist = Math.hypot(dx, dy);
-                    let max = 40;
+                    let max = 45;
                     if(dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
                     stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+                    
+                    // Normalize inputs -1 to 1
                     inputs.x = dx / max; 
+                    inputs.y = dy / max;
                 }
             }
         }, {passive: false});
 
-        const resetStick = () => { touchId = null; inputs.x = 0; stickBase.style.display = 'none'; };
+        const resetStick = () => { 
+            touchId = null; inputs.x = 0; inputs.y = 0; 
+            stickBase.style.display = 'none'; 
+            inputs.activeStick = false;
+        };
         stickZone.addEventListener('touchend', resetStick);
         stickZone.addEventListener('touchcancel', resetStick);
 
@@ -270,11 +281,15 @@
         window.addEventListener('resize', resize);
         resize();
 
+        // --- Math Helpers ---
+        function getTunnelOffset(y) {
+            // Curvature formula: Sine wave that changes phase over depth
+            return Math.sin(y * 0.002) * (W * 0.25);
+        }
+
         function showToast(msg, color="#fff") {
             const t = document.getElementById('toast-msg');
-            t.innerText = msg;
-            t.style.color = color;
-            t.style.opacity = 1;
+            t.innerText = msg; t.style.color = color; t.style.opacity = 1;
             setTimeout(() => t.style.opacity = 0, 1500);
         }
 
@@ -299,11 +314,25 @@
             let y = sy;
             while(y < ey) {
                 y += 90 + Math.random() * 80;
-                let w = 80 + Math.random() * 120;
-                let x = WALL_WIDTH + Math.random() * (W - WALL_WIDTH*2 - w);
                 
-                platforms.push({x, y, w, h: 25, type:'stone'});
+                // Calculate tunnel position at this depth
+                let offset = getTunnelOffset(y);
+                let tunnelCenter = (W/2) + offset;
+                
+                // Platform within tunnel bounds
+                let w = 80 + Math.random() * 100;
+                let minX = tunnelCenter - (WALL_GAP/2) + 20;
+                let maxX = tunnelCenter + (WALL_GAP/2) - w - 20;
+                let x = minX + Math.random() * (maxX - minX);
+                
+                // Platform Types
+                let pType = 'stone';
+                if (Math.random() < 0.2) pType = 'obsidian';
+                else if (Math.random() < 0.2) pType = 'bone';
 
+                platforms.push({x, y, w, h: 25, type: pType});
+
+                // Enemies
                 if (Math.random() < 0.4 && y > 500) {
                     let type = 'crawler';
                     if (y > 1000 && Math.random() > 0.6) type = 'bat';
@@ -332,7 +361,16 @@
             if(!gameActive) return;
             frame++;
             
-            // Movement
+            // 1. Aim Calculation (Precision)
+            if (inputs.activeStick && (Math.abs(inputs.x) > 0.1 || Math.abs(inputs.y) > 0.1)) {
+                player.aimAngle = Math.atan2(inputs.y, inputs.x);
+                if (inputs.x !== 0) player.facing = Math.sign(inputs.x);
+            } else {
+                // Default aim forward
+                player.aimAngle = (player.facing === 1) ? 0 : Math.PI;
+            }
+
+            // 2. Physics
             player.vx = inputs.x * 5.5;
             player.vy += GRAVITY;
             if(player.buff === 'green' && player.vy > 2) player.vy = 2;
@@ -343,9 +381,22 @@
             player.y += player.vy;
             player.vx *= FRICTION;
 
-            // Anim State
-            if(Math.abs(inputs.x) > 0.1) player.facing = Math.sign(inputs.x);
-            
+            // 3. Wall Collision (Curved)
+            let tunnelOffset = getTunnelOffset(player.y);
+            let tunnelCenter = (W/2) + tunnelOffset;
+            let leftWall = tunnelCenter - (WALL_GAP/2);
+            let rightWall = tunnelCenter + (WALL_GAP/2);
+
+            if(player.x < leftWall + 10) { 
+                player.x = leftWall + 10; player.vx = 0; 
+                if(player.vy > 0) { player.vy*=0.8; player.fallStartY = player.y; }
+            }
+            if(player.x > rightWall - 10) { 
+                player.x = rightWall - 10; player.vx = 0; 
+                if(player.vy > 0) { player.vy*=0.8; player.fallStartY = player.y; }
+            }
+
+            // 4. Animation State
             if (!player.grounded) {
                 player.animState = player.vy < 0 ? 'jump' : 'fall';
             } else if (Math.abs(inputs.x) > 0.1) {
@@ -355,7 +406,7 @@
             }
             player.animTimer++;
 
-            // Jump
+            // 5. Jump
             if(inputs.jump && player.grounded) {
                 player.vy = -12.5;
                 player.grounded = false;
@@ -363,15 +414,23 @@
                 spawnParticles(player.x, player.y + player.h/2, '#888', 5);
             }
 
-            // Attack
+            // 6. Attack (Directional)
             if(inputs.atk && player.atkCooldown <= 0) {
                 player.atkCooldown = 20;
                 player.animState = 'attack';
-                spawnSlashVisual(player.x, player.y, player.facing);
                 
-                let hitRect = { x: player.x + (player.facing*30) - 20, y: player.y-30, w: 60, h: 60 };
+                // Spawn Slash in aim direction
+                let slashX = player.x + Math.cos(player.aimAngle) * 30;
+                let slashY = player.y + Math.sin(player.aimAngle) * 30;
+                spawnSlashVisual(slashX, slashY, player.aimAngle);
+                
+                // Directional Hitbox
+                let hitX = player.x + Math.cos(player.aimAngle) * 40;
+                let hitY = player.y + Math.sin(player.aimAngle) * 40;
+                
                 enemies.forEach(e => {
-                    if (rectIntersect(hitRect, {x:e.x-15, y:e.y-15, w:30, h:30})) {
+                    let dist = Math.hypot(hitX - e.x, hitY - e.y);
+                    if (dist < 45) { // Hit radius
                         let dmg = player.buff === 'orange' ? 40 : 20;
                         e.hp -= dmg;
                         spawnParticles(e.x, e.y, '#f00', 8);
@@ -383,20 +442,9 @@
             if(player.invincible > 0) player.invincible--;
             if(player.buffTimer > 0) player.buffTimer--; else player.buff = null;
 
-            // Walls
-            if(player.x < WALL_WIDTH + 10) { 
-                player.x = WALL_WIDTH + 10; player.vx = 0; 
-                if(player.vy > 0) { player.vy*=0.8; player.fallStartY = player.y; }
-            }
-            if(player.x > W - WALL_WIDTH - 10) { 
-                player.x = W - WALL_WIDTH - 10; player.vx = 0; 
-                if(player.vy > 0) { player.vy*=0.8; player.fallStartY = player.y; }
-            }
-
-            // Platforms & Collision
+            // 7. Platforms
             let wasGrounded = player.grounded;
             player.grounded = false;
-            
             if(player.vy > 0) {
                 platforms.forEach(p => {
                     if(player.x > p.x && player.x < p.x + p.w &&
@@ -407,34 +455,26 @@
                             let fallDist = player.y - player.fallStartY;
                             if (fallDist > FALL_DMG_THRESHOLD && player.buff !== 'green') {
                                 let dmg = Math.floor((fallDist - FALL_DMG_THRESHOLD) / 10);
-                                player.hp -= dmg;
-                                shake = 15;
+                                player.hp -= dmg; shake = 15;
                                 spawnParticles(player.x, p.y, '#fff', 15);
                                 showToast(`FALL DMG -${dmg}`, "#f44");
                             }
                             player.fallStartY = player.y;
                         }
-
-                        player.grounded = true;
-                        player.vy = 0;
-                        player.y = p.y - player.h/2;
+                        player.grounded = true; player.vy = 0; player.y = p.y - player.h/2;
                     }
                 });
-            } else {
-                player.fallStartY = player.y;
-            }
+            } else { player.fallStartY = player.y; }
 
-            // Enemies
+            // 8. Entities
             enemies.forEach((e, i) => {
                 if(e.hp <= 0) { enemies.splice(i, 1); return; }
 
                 if (e.type === 'crawler') {
-                    e.x += e.vx;
-                    if(e.x < e.patrol[0] || e.x > e.patrol[1]) e.vx *= -1;
+                    e.x += e.vx; if(e.x < e.patrol[0] || e.x > e.patrol[1]) e.vx *= -1;
                 } else if (e.type === 'bat') {
-                    e.x += Math.sin(frame * 0.05) * 2;
+                    e.x += Math.sin(frame * 0.05) * 3;
                     e.y += (player.y - e.y) * 0.02;
-                    if (Math.abs(player.x - e.x) < 200) e.x += (player.x - e.x) * 0.01;
                 } else if (e.type === 'sentinel') {
                     e.timer++;
                     if (e.timer > 120) {
@@ -444,26 +484,24 @@
                     }
                 }
 
-                if (player.invincible <= 0 && rectIntersect({x:player.x-10,y:player.y-25,w:20,h:50}, {x:e.x-10,y:e.y-10,w:20,h:20})) {
+                if (player.invincible <= 0 && Math.hypot(player.x - e.x, (player.y-10) - e.y) < 25) {
                     if (player.buff === 'blue') {
                         player.buff = null; player.invincible = 30; e.vx *= -3;
                     } else {
                         player.hp -= 15; shake = 10; player.invincible = 60;
-                        player.vy = -6; player.vx = -player.facing * 8;
+                        player.vy = -6; player.vx = -Math.sign(e.x - player.x) * 8;
                     }
                 }
             });
 
-            // Projectiles
             projectiles.forEach((p, i) => {
                 p.x += p.vx; p.y += p.vy; p.life--;
                 if (p.life <= 0) projectiles.splice(i, 1);
-                else if (player.invincible <= 0 && rectIntersect({x:player.x-10,y:player.y-25,w:20,h:50}, {x:p.x-5,y:p.y-5,w:10,h:10})) {
+                else if (player.invincible <= 0 && Math.hypot(player.x - p.x, (player.y-10) - p.y) < 20) {
                     player.hp -= 10; player.invincible = 30; projectiles.splice(i, 1);
                 }
             });
 
-            // Items
             items.forEach((it, i) => {
                 if(Math.hypot(player.x - it.x, player.y - it.y) < 30) {
                     items.splice(i, 1); applyBuff(it.type);
@@ -472,6 +510,7 @@
 
             if(player.hp <= 0) { gameActive = false; document.getElementById('game-over').classList.remove('hidden'); document.getElementById('final-depth').innerText = Math.floor(score/10) + "m"; }
             
+            // Camera
             let targetY = player.y - H * 0.4;
             if(targetY > camY) camY = targetY;
             if(player.y > score) score = player.y;
@@ -483,10 +522,6 @@
 
             updateUI();
             if(shake > 0) shake *= 0.9;
-        }
-
-        function rectIntersect(r1, r2) {
-            return !(r2.x > r1.x + r1.w || r2.x + r2.w < r1.x || r2.y > r1.y + r1.h || r2.y + r2.h < r1.y);
         }
 
         function applyBuff(type) {
@@ -508,23 +543,18 @@
         function spawnParticles(x, y, c, n) {
             for(let i=0;i<n;i++) particles.push({x, y, vx:(Math.random()-0.5)*5, vy:(Math.random()-0.5)*5, life:30, c});
         }
-        function spawnSlashVisual(x, y, facing) {
-            particles.push({x, y, type:'slash', life:12, facing, timer:0});
+        function spawnSlashVisual(x, y, angle) {
+            particles.push({x, y, type:'slash', life:12, angle: angle, timer:0});
         }
         function getBuffColor(t) { if(t==='red') return '#f44'; if(t==='blue') return '#44f'; if(t==='green') return '#4f4'; return '#fa0'; }
 
-        // --- Render (HD Style) ---
+        // --- Render ---
         function draw() {
-            // Background Gradient
+            // Background
             let depthFactor = Math.min(1, score / 15000);
             let r = 20 + (30*depthFactor);
-            let g = 20; 
             let b = 50 - (20*depthFactor);
-            
-            let grad = ctx.createLinearGradient(0, 0, 0, H);
-            grad.addColorStop(0, `rgb(${r*0.5},${g*0.5},${b*0.5})`);
-            grad.addColorStop(1, `rgb(${r},${g},${b})`);
-            ctx.fillStyle = grad;
+            ctx.fillStyle = `rgb(${r*0.5},20,${b*0.5})`;
             ctx.fillRect(0,0,W,H);
 
             // Stars
@@ -535,56 +565,69 @@
             });
 
             // Camera Shake
-            let sx = (Math.random()-0.5)*shake;
-            let sy = (Math.random()-0.5)*shake;
             ctx.save();
-            ctx.translate(sx, sy - camY);
+            ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake - camY);
 
-            // Walls (Textured)
+            // Draw Curved Walls
             ctx.fillStyle = "#111";
-            ctx.fillRect(0, camY-100, WALL_WIDTH, H+200);
-            ctx.fillRect(W-WALL_WIDTH, camY-100, WALL_WIDTH, H+200);
-            ctx.strokeStyle = "#333";
             ctx.beginPath();
-            let shift = (camY % 100);
-            for(let y = camY - shift; y < camY+H; y+=50) {
-                ctx.moveTo(5, y); ctx.lineTo(30, y+20); ctx.lineTo(10, y+40);
-                ctx.moveTo(W-5, y); ctx.lineTo(W-30, y+20); ctx.lineTo(W-10, y+40);
+            
+            // We draw the walls in segments to match curvature
+            let startDrawY = Math.floor(camY / 20) * 20;
+            for(let y = startDrawY; y < camY + H + 50; y += 20) {
+                let off = getTunnelOffset(y);
+                let cx = (W/2) + off;
+                // Left Wall Block
+                ctx.fillRect(0, y, cx - (WALL_GAP/2), 22);
+                // Right Wall Block
+                ctx.fillRect(cx + (WALL_GAP/2), y, W - (cx + WALL_GAP/2), 22);
             }
-            ctx.stroke();
 
-            // Platforms (Restored HD Style: Stone + Moss)
+            // Platforms (Varied)
             platforms.forEach(p => {
-                // Stone body
-                ctx.fillStyle = "#222";
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-                // Moss top
-                ctx.fillStyle = "#345";
-                ctx.fillRect(p.x, p.y, p.w, 4);
-                // Cracks
-                ctx.strokeStyle = "#000"; ctx.lineWidth=1;
-                ctx.beginPath();
-                ctx.moveTo(p.x+10, p.y+5); ctx.lineTo(p.x+20, p.y+15);
-                ctx.stroke();
+                // Base
+                if (p.type === 'stone') {
+                    ctx.fillStyle = "#222"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = "#453"; ctx.fillRect(p.x, p.y, p.w, 4); // Moss
+                } else if (p.type === 'obsidian') {
+                    ctx.fillStyle = "#112"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = "#335"; ctx.beginPath(); // Shine
+                    ctx.moveTo(p.x, p.y); ctx.lineTo(p.x+10, p.y); ctx.lineTo(p.x, p.y+10); ctx.fill();
+                } else if (p.type === 'bone') {
+                    ctx.fillStyle = "#ddd"; ctx.fillRect(p.x, p.y, p.w, p.h);
+                    ctx.fillStyle = "#bbb"; ctx.fillRect(p.x+10, p.y+5, p.w-20, p.h-10);
+                }
             });
 
-            // Enemies
+            // Monsters (Embellished)
             enemies.forEach(e => {
                 if (e.type === 'crawler') {
-                    ctx.fillStyle = "#a33";
-                    ctx.beginPath(); ctx.arc(e.x, e.y, 10, 0, Math.PI, true); ctx.fill(); 
-                    ctx.strokeStyle = "#a33"; ctx.beginPath();
-                    let l = Math.sin(frame*0.5)*5;
-                    ctx.moveTo(e.x-8, e.y); ctx.lineTo(e.x-15+l, e.y+10);
-                    ctx.moveTo(e.x+8, e.y); ctx.lineTo(e.x+15-l, e.y+10); ctx.stroke();
+                    // Segmented body
+                    ctx.fillStyle = "#822";
+                    ctx.beginPath(); ctx.arc(e.x, e.y, 8, 0, Math.PI*2); ctx.fill(); // Head
+                    ctx.beginPath(); ctx.arc(e.x - (Math.sign(e.vx)*10), e.y, 6, 0, Math.PI*2); ctx.fill(); // Body
+                    ctx.beginPath(); ctx.arc(e.x - (Math.sign(e.vx)*18), e.y, 4, 0, Math.PI*2); ctx.fill(); // Tail
+                    // Mandibles
+                    ctx.strokeStyle = "#f00"; ctx.lineWidth=1;
+                    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+(Math.sign(e.vx)*12), e.y-5); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+(Math.sign(e.vx)*12), e.y+5); ctx.stroke();
                 } else if (e.type === 'bat') {
-                    ctx.fillStyle = "#33a"; ctx.beginPath(); ctx.arc(e.x, e.y, 8, 0, Math.PI*2); ctx.fill();
-                    ctx.fillStyle = "#44c"; let wY = Math.sin(frame*0.5)*10;
-                    ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(e.x-15,e.y-10+wY); ctx.lineTo(e.x-5,e.y+5); ctx.fill();
-                    ctx.beginPath(); ctx.moveTo(e.x,e.y); ctx.lineTo(e.x+15,e.y-10+wY); ctx.lineTo(e.x+5,e.y+5); ctx.fill();
-                } else {
-                    ctx.fillStyle = "#222"; ctx.strokeStyle = "#f0f"; ctx.beginPath(); ctx.arc(e.x, e.y, 12, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-                    ctx.fillStyle = "#f0f"; ctx.beginPath(); ctx.arc(e.x, e.y, 4+Math.sin(frame*0.2)*2, 0, Math.PI*2); ctx.fill();
+                    // Jagged Wings
+                    ctx.fillStyle = "#222"; ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = "#400"; // Wing color
+                    let wingFlap = Math.sin(frame*0.4)*15;
+                    ctx.beginPath(); 
+                    ctx.moveTo(e.x, e.y); ctx.lineTo(e.x-20, e.y-10+wingFlap); ctx.lineTo(e.x-10, e.y+10); 
+                    ctx.moveTo(e.x, e.y); ctx.lineTo(e.x+20, e.y-10+wingFlap); ctx.lineTo(e.x+10, e.y+10); 
+                    ctx.fill();
+                    // Glowing Eyes
+                    ctx.fillStyle = "#f00"; ctx.fillRect(e.x-2, e.y-2, 4, 2);
+                } else if (e.type === 'sentinel') {
+                    // Floating Eye
+                    ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(e.x, e.y, 14, 0, Math.PI*2); ctx.fill();
+                    ctx.fillStyle = "#f0f"; ctx.beginPath(); ctx.arc(e.x, e.y, 6, 0, Math.PI*2); ctx.fill(); // Iris
+                    ctx.strokeStyle = "#505"; ctx.lineWidth=2;
+                    ctx.beginPath(); ctx.arc(e.x, e.y, 20, frame*0.1, frame*0.1 + Math.PI); ctx.stroke(); // Ring
                 }
             });
 
@@ -595,14 +638,17 @@
                 ctx.beginPath(); ctx.arc(it.x, it.y+Math.sin(frame*0.1)*3, 6, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
             });
 
-            // Particles
+            // Particles (Slash)
             particles.forEach((p, i) => {
                 if (p.type === 'slash') {
                     p.life--;
-                    ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.facing, 1);
-                    ctx.beginPath(); ctx.arc(10, 0, 35, -Math.PI/3, Math.PI/3);
+                    ctx.save(); ctx.translate(p.x, p.y); 
+                    ctx.rotate(p.angle); // Rotate to aim
+                    ctx.beginPath(); 
+                    ctx.arc(0, 0, 40, -Math.PI/4, Math.PI/4); // Arc
                     ctx.strokeStyle = player.buff==='orange'?"#fa0":"#fff";
-                    ctx.lineWidth = 4 * (p.life/10); ctx.shadowBlur=10; ctx.shadowColor=ctx.strokeStyle;
+                    ctx.lineWidth = 5 * (p.life/12); 
+                    ctx.shadowBlur=15; ctx.shadowColor=ctx.strokeStyle;
                     ctx.stroke(); ctx.restore();
                 } else {
                     p.x+=p.vx; p.y+=p.vy; p.life--;
@@ -619,7 +665,7 @@
 
             // Player (HD Human)
             if (player.invincible <= 0 || frame % 4 === 0) {
-                drawHuman(player.x, player.y, player.w, player.h, player.facing, player.animState, player.animTimer);
+                drawHuman(player.x, player.y, player.w, player.h, player.facing, player.animState, player.animTimer, player.aimAngle);
             }
 
             ctx.restore();
@@ -632,11 +678,18 @@
             ctx.fillRect(0,0,W,H);
         }
 
-        function drawHuman(x, y, w, h, facing, state, timer) {
+        function drawHuman(x, y, w, h, facing, state, timer, aimAngle) {
             ctx.save();
             ctx.translate(x, y);
-            ctx.scale(facing, 1);
             
+            // We use aimAngle to drive arm rotation directly
+            // Flip body based on aim direction to look natural
+            let renderFacing = Math.abs(aimAngle) > Math.PI/2 ? -1 : 1;
+            ctx.scale(renderFacing, 1);
+            
+            // Correct aim angle for flipping
+            let localAim = renderFacing === 1 ? aimAngle : Math.PI - aimAngle;
+
             // Skeleton Setup
             let headY = -h/2;
             let neckY = -h/2 + 10;
@@ -644,27 +697,18 @@
             let kneeY = 15;
             let footY = 28;
 
-            // Anim Logic
-            let armAngle = 0;
+            // Leg Animation
             let legAngle = 0;
             let bob = 0;
-
-            if (state === 'idle') {
-                bob = Math.sin(timer * 0.1) * 1;
-                armAngle = Math.sin(timer * 0.05) * 0.1;
-            } else if (state === 'run') {
+            if (state === 'run') {
                 legAngle = Math.sin(timer * 0.3) * 0.8;
-                armAngle = -legAngle;
                 bob = Math.abs(Math.sin(timer * 0.6)) * 2;
             } else if (state === 'jump') {
-                legAngle = 0.5; armAngle = -2;
+                legAngle = 0.5;
             } else if (state === 'fall') {
-                legAngle = 0.2; armAngle = -2.5;
-            } else if (state === 'attack') {
-                // Sword Swing Logic tied to cooldown (20 frames)
-                // 1.0 -> 0.0 progress
-                let progress = player.atkCooldown / 20; 
-                armAngle = -Math.PI/2 + (Math.sin((1-progress) * Math.PI) * 2); 
+                legAngle = 0.2;
+            } else {
+                bob = Math.sin(timer * 0.1) * 1;
             }
 
             // Draw Style
@@ -676,11 +720,10 @@
             ctx.lineTo(-Math.sin(legAngle)*10, kneeY+bob); 
             ctx.lineTo(-Math.sin(legAngle)*15, footY+bob); ctx.stroke();
 
-            // Back Arm
+            // Back Arm (Idle)
             ctx.lineWidth = 5; ctx.beginPath(); 
             ctx.moveTo(0, neckY+5+bob); 
-            ctx.lineTo(Math.sin(armAngle)*10, neckY+15+bob); 
-            ctx.lineTo(Math.sin(armAngle)*15, neckY+25+bob); ctx.stroke();
+            ctx.lineTo(-5, neckY+15+bob); ctx.lineTo(-10, neckY+25+bob); ctx.stroke();
 
             // Torso
             ctx.fillStyle = "#1e2840"; 
@@ -698,25 +741,28 @@
             ctx.lineTo(Math.sin(legAngle)*10, kneeY+bob); 
             ctx.lineTo(Math.sin(legAngle)*15, footY+bob); ctx.stroke();
 
-            // Front Arm (Sword Arm)
-            // Calculate Elbow and Hand position based on armAngle
+            // Front Arm (AIMING ARM)
             let shoulderX = 0; let shoulderY = neckY + 5 + bob;
-            let elbowX = Math.cos(armAngle + Math.PI/2) * 12; // Simple IK-ish
-            let elbowY = shoulderY + Math.sin(armAngle + Math.PI/2) * 12;
-            let handX = elbowX + Math.cos(armAngle + Math.PI/2) * 12;
-            let handY = elbowY + Math.sin(armAngle + Math.PI/2) * 12;
+            // IK for arm based on Local Aim
+            let armLen = 22;
+            let handX = Math.cos(localAim) * armLen;
+            let handY = Math.sin(localAim) * armLen;
+            
+            // Elbow approx
+            let elbowX = handX / 2; 
+            let elbowY = handY / 2 + 5; // Sag slightly
 
             ctx.lineWidth = 5; ctx.strokeStyle = "#fff";
             ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); 
-            ctx.lineTo(elbowX, elbowY); 
-            ctx.lineTo(handX, handY); ctx.stroke();
+            ctx.lineTo(shoulderX + elbowX, shoulderY + elbowY); 
+            ctx.lineTo(shoulderX + handX, shoulderY + handY); ctx.stroke();
 
-            // Sword (attached to hand)
+            // Sword
             ctx.save();
-            ctx.translate(handX, handY);
-            ctx.rotate(armAngle + 2); // Offset sword angle
-            ctx.fillStyle = "#d4af37"; ctx.fillRect(-2, -2, 4, 8); // Hilt
-            ctx.fillStyle = (player.buff === 'orange') ? "#ffaa00" : "#00ffff"; // Blade
+            ctx.translate(shoulderX + handX, shoulderY + handY);
+            ctx.rotate(localAim + 1.5); // Perpendicular to arm
+            ctx.fillStyle = "#d4af37"; ctx.fillRect(-2, -2, 4, 8); 
+            ctx.fillStyle = (player.buff === 'orange') ? "#ffaa00" : "#00ffff"; 
             ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
             ctx.fillRect(-1, -30, 2, 30);
             ctx.restore();
