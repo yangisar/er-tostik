@@ -177,6 +177,363 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d', { alpha: false });
 
+        // ============================================================================
+        // WARRIOR SPRITE SYSTEM - Ancient Central Asian Character
+        // ============================================================================
+
+        const SPRITE_SCALE = 2; // Scale multiplier for the 32x32 sprite
+
+        // Color Palette
+        const COLORS = {
+            // Helmet & Metal
+            HELMET_DARK: '#2d3561',
+            HELMET_MID: '#4a5a8a',
+            HELMET_LIGHT: '#6b7db5',
+            HELMET_SHINE: '#9fb3ff',
+            GOLD: '#ffd700',
+            GOLD_DARK: '#b8860b',
+            
+            // Armor
+            ARMOR_DARK: '#1a4d5c',
+            ARMOR_MID: '#2d7a8f',
+            ARMOR_LIGHT: '#45a8c5',
+            ARMOR_SHINE: '#7fd8f0',
+            
+            // Clothing
+            TUNIC_DARK: '#8b0000',
+            TUNIC_MID: '#c41e3a',
+            TUNIC_LIGHT: '#e63946',
+            
+            // Scarf (Signature cyan/turquoise)
+            SCARF_DARK: '#00a8a8',
+            SCARF_MID: '#00d4d4',
+            SCARF_LIGHT: '#00ffff',
+            SCARF_GLOW: '#b0ffff',
+            
+            // Belt
+            BELT_LEATHER: '#8b4513',
+            BELT_BUCKLE: '#ffd700',
+            
+            // Boots
+            BOOT_DARK: '#3d2817',
+            BOOT_MID: '#5c4033',
+            BOOT_LIGHT: '#7d5a3d',
+            
+            // Skin
+            SKIN_DARK: '#8d6e63',
+            SKIN_MID: '#a1887f',
+            SKIN_LIGHT: '#bcaaa4',
+            
+            // Sword
+            BLADE_DARK: '#b0c4de',
+            BLADE_MID: '#d3e5f5',
+            BLADE_LIGHT: '#f0f8ff',
+            HILT_GOLD: '#daa520',
+            HILT_JEWEL: '#ff0000',
+        };
+
+        class WarriorSprite {
+            constructor() {
+                this.sprites = {};
+                this.initializeAllSprites();
+            }
+
+            createEmptySprite() {
+                const sprite = [];
+                for (let y = 0; y < 32; y++) {
+                    sprite[y] = new Array(32).fill(null);
+                }
+                return sprite;
+            }
+
+            // Base idle frame
+            createIdleFrame1() {
+                const s = this.createEmptySprite();
+                
+                // Plume
+                s[3][15] = COLORS.SCARF_LIGHT; s[3][16] = COLORS.SCARF_MID;
+                s[4][14] = COLORS.SCARF_MID; s[4][15] = COLORS.SCARF_LIGHT;
+                s[4][16] = COLORS.SCARF_MID; s[4][17] = COLORS.SCARF_DARK;
+                s[5][15] = COLORS.SCARF_MID; s[5][16] = COLORS.SCARF_DARK;
+                
+                // Helmet
+                s[6][15] = COLORS.HELMET_SHINE; s[6][16] = COLORS.HELMET_LIGHT;
+                s[7][14] = COLORS.HELMET_LIGHT; s[7][15] = COLORS.HELMET_SHINE;
+                s[7][16] = COLORS.HELMET_MID; s[7][17] = COLORS.HELMET_DARK;
+                for (let x = 13; x <= 18; x++) s[8][x] = x <= 15 ? COLORS.HELMET_LIGHT : COLORS.HELMET_MID;
+                for (let x = 12; x <= 19; x++) s[9][x] = x <= 14 ? COLORS.HELMET_LIGHT : x <= 16 ? COLORS.HELMET_MID : COLORS.HELMET_DARK;
+                
+                // Gold rim
+                for (let x = 12; x <= 19; x++) s[10][x] = COLORS.GOLD;
+                s[10][15] = COLORS.GOLD_DARK; s[10][16] = COLORS.GOLD_DARK;
+                
+                // Face
+                s[11][13] = COLORS.HELMET_MID; s[11][14] = COLORS.SKIN_DARK;
+                s[11][15] = COLORS.SKIN_MID; s[11][16] = COLORS.SKIN_MID;
+                s[11][17] = COLORS.SKIN_DARK; s[11][18] = COLORS.HELMET_MID;
+                s[12][13] = COLORS.HELMET_DARK; s[12][14] = COLORS.SKIN_MID;
+                s[12][15] = COLORS.HELMET_DARK; s[12][16] = COLORS.HELMET_DARK;
+                s[12][17] = COLORS.SKIN_MID; s[12][18] = COLORS.HELMET_DARK;
+                
+                // Scarf flow
+                s[11][10] = COLORS.SCARF_DARK; s[11][11] = COLORS.SCARF_MID;
+                s[12][9] = COLORS.SCARF_DARK; s[12][10] = COLORS.SCARF_LIGHT; s[12][11] = COLORS.SCARF_MID;
+                s[13][8] = COLORS.SCARF_MID; s[13][9] = COLORS.SCARF_LIGHT; s[13][10] = COLORS.SCARF_GLOW;
+                s[14][8] = COLORS.SCARF_DARK; s[14][9] = COLORS.SCARF_MID;
+                s[15][8] = COLORS.SCARF_DARK;
+                s[11][20] = COLORS.SCARF_MID; s[11][21] = COLORS.SCARF_DARK;
+                s[12][20] = COLORS.SCARF_MID; s[12][21] = COLORS.SCARF_LIGHT; s[12][22] = COLORS.SCARF_DARK;
+                s[13][21] = COLORS.SCARF_LIGHT; s[13][22] = COLORS.SCARF_GLOW; s[13][23] = COLORS.SCARF_MID;
+                s[14][22] = COLORS.SCARF_MID; s[14][23] = COLORS.SCARF_DARK;
+                s[15][23] = COLORS.SCARF_DARK;
+                
+                // Shoulders
+                s[13][12] = COLORS.ARMOR_DARK; s[13][13] = COLORS.ARMOR_MID;
+                s[14][11] = COLORS.ARMOR_DARK; s[14][12] = COLORS.ARMOR_LIGHT; s[14][13] = COLORS.ARMOR_MID;
+                s[15][11] = COLORS.ARMOR_MID; s[15][12] = COLORS.ARMOR_LIGHT;
+                s[13][18] = COLORS.ARMOR_MID; s[13][19] = COLORS.ARMOR_DARK;
+                s[14][18] = COLORS.ARMOR_MID; s[14][19] = COLORS.ARMOR_LIGHT; s[14][20] = COLORS.ARMOR_DARK;
+                s[15][19] = COLORS.ARMOR_LIGHT; s[15][20] = COLORS.ARMOR_MID;
+                
+                // Chest armor
+                for (let y = 13; y <= 18; y++) {
+                    for (let x = 14; x <= 17; x++) {
+                        if (y === 13 || y === 15 || y === 17) {
+                            s[y][x] = (x % 2 === 0) ? COLORS.ARMOR_LIGHT : COLORS.ARMOR_MID;
+                        } else {
+                            s[y][x] = (x % 2 === 0) ? COLORS.ARMOR_MID : COLORS.ARMOR_DARK;
+                        }
+                    }
+                }
+                s[15][15] = COLORS.GOLD; s[15][16] = COLORS.GOLD;
+                s[16][15] = COLORS.GOLD_DARK; s[16][16] = COLORS.GOLD_DARK;
+                
+                // Belt
+                for (let x = 13; x <= 18; x++) s[19][x] = COLORS.BELT_LEATHER;
+                s[19][15] = COLORS.BELT_BUCKLE; s[19][16] = COLORS.BELT_BUCKLE;
+                s[20][15] = COLORS.GOLD_DARK; s[20][16] = COLORS.GOLD_DARK;
+                
+                // Tunic edges
+                for (let y = 17; y <= 18; y++) {
+                    s[y][13] = COLORS.TUNIC_DARK; s[y][18] = COLORS.TUNIC_DARK;
+                }
+                
+                // Legs
+                for (let y = 20; y <= 25; y++) {
+                    s[y][13] = y <= 22 ? COLORS.ARMOR_MID : COLORS.TUNIC_MID;
+                    s[y][14] = y <= 22 ? COLORS.ARMOR_LIGHT : COLORS.TUNIC_LIGHT;
+                    s[y][17] = y <= 22 ? COLORS.ARMOR_LIGHT : COLORS.TUNIC_LIGHT;
+                    s[y][18] = y <= 22 ? COLORS.ARMOR_MID : COLORS.TUNIC_MID;
+                }
+                
+                // Boots
+                for (let y = 26; y <= 29; y++) {
+                    s[y][13] = COLORS.BOOT_DARK; s[y][14] = COLORS.BOOT_MID;
+                    s[y][15] = y === 29 ? COLORS.BOOT_MID : COLORS.BOOT_LIGHT;
+                    s[y][16] = y === 29 ? COLORS.BOOT_MID : COLORS.BOOT_LIGHT;
+                    s[y][17] = COLORS.BOOT_MID; s[y][18] = COLORS.BOOT_DARK;
+                }
+                
+                // Sword sheathed
+                s[16][19] = COLORS.HILT_GOLD; s[17][19] = COLORS.HILT_GOLD;
+                s[17][20] = COLORS.HILT_JEWEL; s[18][19] = COLORS.HILT_GOLD;
+                for (let y = 19; y <= 24; y++) {
+                    s[y][19] = COLORS.BLADE_DARK;
+                    if (y >= 20) s[y][20] = COLORS.BLADE_MID;
+                }
+                s[23][20] = COLORS.BLADE_LIGHT;
+                
+                // Left arm
+                s[16][11] = COLORS.ARMOR_MID; s[16][12] = COLORS.ARMOR_LIGHT;
+                s[17][11] = COLORS.TUNIC_MID; s[17][12] = COLORS.ARMOR_MID;
+                s[18][11] = COLORS.TUNIC_MID; s[18][12] = COLORS.TUNIC_LIGHT;
+                s[19][11] = COLORS.SKIN_MID; s[19][12] = COLORS.SKIN_LIGHT;
+                s[20][11] = COLORS.SKIN_DARK; s[20][12] = COLORS.SKIN_MID;
+                s[21][11] = COLORS.BOOT_DARK; s[21][12] = COLORS.BOOT_MID;
+                
+                return s;
+            }
+
+            createIdleFrame2() {
+                const s = this.createIdleFrame1();
+                // Breathing shift
+                for (let y = 13; y <= 18; y++) {
+                    for (let x = 11; x <= 20; x++) {
+                        if (s[y][x] !== null) {
+                            s[y - 1][x] = s[y][x];
+                            if (y === 18) s[y][x] = null;
+                        }
+                    }
+                }
+                s[13][23] = COLORS.SCARF_LIGHT; s[14][24] = COLORS.SCARF_MID; s[15][24] = COLORS.SCARF_DARK;
+                return s;
+            }
+
+            createRunFrame() {
+                const s = this.createIdleFrame1();
+                // Lean forward
+                for (let y = 6; y <= 18; y++) {
+                    for (let x = 0; x < 30; x++) {
+                        s[y][x] = s[y][x + 2];
+                    }
+                }
+                // Scarf streaming back
+                for (let y = 12; y <= 16; y++) {
+                    s[y][6] = COLORS.SCARF_LIGHT;
+                    s[y][7] = COLORS.SCARF_MID;
+                    s[y][8] = COLORS.SCARF_DARK;
+                }
+                return s;
+            }
+
+            createJumpFrame() {
+                const s = this.createEmptySprite();
+                const idle = this.createIdleFrame1();
+                
+                // Copy upper body shifted up
+                for (let y = 3; y <= 18; y++) {
+                    for (let x = 0; x < 32; x++) {
+                        s[y - 2][x] = idle[y][x];
+                    }
+                }
+                
+                // Legs tucked
+                for (let y = 18; y <= 23; y++) {
+                    s[y][12] = COLORS.ARMOR_LIGHT; s[y][13] = COLORS.ARMOR_MID;
+                    s[y][18] = COLORS.ARMOR_MID; s[y][19] = COLORS.ARMOR_LIGHT;
+                }
+                s[24][12] = COLORS.BOOT_MID; s[24][13] = COLORS.BOOT_DARK;
+                s[24][18] = COLORS.BOOT_DARK; s[24][19] = COLORS.BOOT_MID;
+                
+                // Scarf flowing up
+                s[14][9] = COLORS.SCARF_LIGHT; s[15][8] = COLORS.SCARF_GLOW;
+                s[16][7] = COLORS.SCARF_MID; s[17][7] = COLORS.SCARF_DARK;
+                s[14][22] = COLORS.SCARF_LIGHT; s[15][23] = COLORS.SCARF_GLOW;
+                s[16][24] = COLORS.SCARF_MID; s[17][24] = COLORS.SCARF_DARK;
+                
+                return s;
+            }
+
+            createFallFrame() {
+                const s = this.createEmptySprite();
+                const idle = this.createIdleFrame1();
+                
+                // Copy upper body
+                for (let y = 3; y <= 18; y++) {
+                    for (let x = 0; x < 32; x++) {
+                        s[y][x] = idle[y][x];
+                    }
+                }
+                
+                // Legs dangling
+                for (let y = 19; y <= 28; y++) {
+                    s[y][14] = (y >= 25) ? COLORS.BOOT_MID : COLORS.TUNIC_LIGHT;
+                    s[y][17] = (y >= 25) ? COLORS.BOOT_MID : COLORS.TUNIC_LIGHT;
+                }
+                
+                // Scarf flowing upward (iconic)
+                for (let y = 11; y >= 4; y--) {
+                    s[y][15] = COLORS.SCARF_LIGHT; s[y][16] = COLORS.SCARF_MID;
+                }
+                s[4][15] = COLORS.SCARF_GLOW; s[3][15] = COLORS.SCARF_LIGHT;
+                s[2][15] = COLORS.SCARF_MID; s[1][16] = COLORS.SCARF_DARK;
+                
+                return s;
+            }
+
+            createAttackFrame() {
+                const s = this.createIdleFrame1();
+                
+                // Remove sheathed sword
+                for (let y = 16; y <= 24; y++) {
+                    s[y][19] = null; s[y][20] = null;
+                }
+                
+                // Sword slashing horizontal
+                s[15][20] = COLORS.HILT_GOLD; s[15][21] = COLORS.HILT_JEWEL;
+                s[16][20] = COLORS.HILT_GOLD;
+                
+                for (let x = 21; x <= 26; x++) {
+                    s[15][x] = (x % 2 === 0) ? COLORS.BLADE_LIGHT : COLORS.BLADE_MID;
+                    s[16][x] = COLORS.BLADE_DARK;
+                }
+                s[15][26] = COLORS.BLADE_LIGHT;
+                
+                // Motion blur
+                s[14][24] = COLORS.SCARF_LIGHT; s[14][25] = COLORS.SCARF_MID;
+                s[17][24] = COLORS.SCARF_MID;
+                
+                return s;
+            }
+
+            createCrouchFrame() {
+                const s = this.createEmptySprite();
+                const idle = this.createIdleFrame1();
+                
+                // Compressed
+                for (let y = 3; y <= 12; y++) {
+                    for (let x = 0; x < 32; x++) {
+                        s[y + 4][x] = idle[y][x];
+                    }
+                }
+                
+                for (let y = 13; y <= 15; y++) {
+                    for (let x = 11; x <= 20; x++) {
+                        s[y + 4][x] = idle[y][x];
+                    }
+                }
+                
+                for (let y = 22; y <= 29; y++) {
+                    for (let x = 12; x <= 19; x++) {
+                        s[y][x] = idle[y - 2][x];
+                    }
+                }
+                
+                s[28][10] = COLORS.SCARF_MID; s[29][9] = COLORS.SCARF_DARK;
+                s[28][21] = COLORS.SCARF_MID; s[29][22] = COLORS.SCARF_DARK;
+                
+                return s;
+            }
+
+            initializeAllSprites() {
+                this.sprites = {
+                    idle: [this.createIdleFrame1(), this.createIdleFrame2()],
+                    run: [this.createRunFrame()],
+                    jump: [this.createJumpFrame()],
+                    fall: [this.createFallFrame()],
+                    attack: [this.createAttackFrame()],
+                    crouch: [this.createCrouchFrame()]
+                };
+            }
+
+            drawSprite(ctx, animName, frame, x, y, facing, invincible, flashFrame) {
+                const anim = this.sprites[animName] || this.sprites.idle;
+                const sprite = anim[frame % anim.length];
+                
+                // Invincibility flash
+                if (invincible && flashFrame) return;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(facing * SPRITE_SCALE, SPRITE_SCALE);
+                
+                // Draw each pixel
+                for (let py = 0; py < 32; py++) {
+                    for (let px = 0; px < 32; px++) {
+                        const color = sprite[py][px];
+                        if (color) {
+                            ctx.fillStyle = color;
+                            ctx.fillRect(px - 16, py - 16, 1, 1);
+                        }
+                    }
+                }
+                
+                ctx.restore();
+            }
+        }
+
+        const warriorSprite = new WarriorSprite();
+
         // --- Config ---
         let W, H;
         const GRAVITY = 0.5;
@@ -185,16 +542,7 @@
         const WALL_GAP = 300; 
         const FALL_DMG_THRESHOLD = 450;
         
-        // --- State ---
-        let gameActive = false;
-        let camY = 0;
-        let score = 0;
-        let frame = 0;
-        let shake = 0;
-        let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false };
-
-        // --- Sprites (Simple Bitmaps) ---
-        // 1 = Color, 0 = Empty
+        // --- Enemy Sprites ---
         const SPRITE_CRAWLER = [
             "00111100",
             "01111110",
@@ -219,6 +567,14 @@
             "00111100"
         ];
 
+        // --- State ---
+        let gameActive = false;
+        let camY = 0;
+        let score = 0;
+        let frame = 0;
+        let shake = 0;
+        let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false };
+
         // --- Objects ---
         let player = {
             x: 0, y: 0, w: 20, h: 55,
@@ -230,6 +586,7 @@
             wallSliding: false,
             fallStartY: 0,
             animState: 'idle',
+            animFrame: 0,
             animTimer: 0,
             invincible: 0,
             buff: null, buffTimer: 0,
@@ -314,6 +671,7 @@
             document.getElementById('game-over').classList.add('hidden');
             player.x = W/2; player.y = 100; player.vx = 0; player.vy = 0;
             player.hp = 100; player.buff = null; player.fallStartY = player.y;
+            player.animState = 'idle'; player.animFrame = 0; player.animTimer = 0;
             camY = 0; score = 0;
             platforms = []; items = []; particles = []; enemies = []; projectiles = [];
             platforms.push({x: W/2-100, y: 300, w: 200, h: 20, type:'stone'});
@@ -380,7 +738,7 @@
 
             player.x += player.vx;
             player.y += player.vy;
-            player.vx *= player.friction; // Dynamic friction
+            player.vx *= player.friction;
 
             // Wall Slide
             let tunnelOffset = getTunnelOffset(player.y);
@@ -409,6 +767,10 @@
                 else player.animState = 'idle';
             }
             player.animTimer++;
+            if (player.animTimer > 15) {
+                player.animTimer = 0;
+                player.animFrame++;
+            }
 
             // Jump
             if(inputs.jump) {
@@ -421,28 +783,26 @@
                 }
             }
 
-            // Attack (Directional + Deflect)
+            // Attack
             if(inputs.atk && player.atkCooldown <= 0) {
                 player.atkCooldown = 20;
                 player.animState = 'attack';
-                player.animTimer = 0; // Reset for swipe
+                player.animTimer = 0;
+                player.animFrame = 0;
                 
                 let slashX = player.x + Math.cos(player.aimAngle) * 30;
                 let slashY = player.y + Math.sin(player.aimAngle) * 30;
                 spawnSlashVisual(slashX, slashY, player.aimAngle);
                 
-                // Hitbox
                 let hitDist = 45;
                 let dmg = player.buff === 'orange' ? 40 : 20;
 
-                // 1. Enemy Hit
                 enemies.forEach(e => {
                     if (Math.hypot((player.x + Math.cos(player.aimAngle)*30) - e.x, (player.y + Math.sin(player.aimAngle)*30) - e.y) < hitDist) {
                         e.hp -= dmg; spawnParticles(e.x, e.y, '#f00', 8); shake = 6;
                     }
                 });
 
-                // 2. Projectile Deflect
                 for(let i=projectiles.length-1; i>=0; i--) {
                     let p = projectiles[i];
                     if (Math.hypot((player.x + Math.cos(player.aimAngle)*30) - p.x, (player.y + Math.sin(player.aimAngle)*30) - p.y) < hitDist) {
@@ -454,7 +814,7 @@
                 }
             }
             if(player.atkCooldown > 0) player.atkCooldown--;
-            if (player.atkCooldown < 10 && player.animState === 'attack') player.animState = 'idle'; // Reset anim
+            if (player.atkCooldown < 10 && player.animState === 'attack') player.animState = 'idle';
 
             if(player.invincible > 0) player.invincible--;
             if(player.buffTimer > 0) player.buffTimer--; else player.buff = null;
@@ -462,7 +822,7 @@
             // Platforms
             let wasGrounded = player.grounded;
             player.grounded = false;
-            player.friction = FRICTION_STONE; // Default
+            player.friction = FRICTION_STONE;
 
             if(player.vy > 0) {
                 platforms.forEach(p => {
@@ -480,10 +840,9 @@
                             player.fallStartY = player.y;
                         }
 
-                        // Platform Type Logic
                         if (p.type === 'ice') player.friction = FRICTION_ICE;
                         if (p.type === 'slime') {
-                            player.vy = -15; // Bounce
+                            player.vy = -15;
                             spawnParticles(player.x, p.y, '#0f0', 5);
                         } else {
                             player.grounded = true; player.vy = 0; player.y = p.y - player.h/2;
@@ -510,18 +869,15 @@
                     }
                 }
 
-                // Interaction
-                // 1. Mario Stomp
                 if (player.vy > 0 && Math.abs(player.x - e.x) < 20 && player.y < e.y - 10 && player.y > e.y - 40) {
                     enemies.splice(i, 1);
-                    player.vy = -12; // Bounce
+                    player.vy = -12;
                     spawnParticles(e.x, e.y, '#f00', 10);
                     showToast("CRUSH!", "#fff");
                     shake = 5;
                     return;
                 }
 
-                // 2. Hurt Player
                 if (player.invincible <= 0 && Math.hypot(player.x - e.x, (player.y-10) - e.y) < 25) {
                     if (player.buff === 'blue') {
                         player.buff = null; player.invincible = 30; e.vx *= -3;
@@ -680,9 +1036,18 @@
                 ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
             });
 
-            if (player.invincible <= 0 || frame % 4 === 0) {
-                drawHuman(player.x, player.y, player.w, player.h, player.facing, player.animState, player.animTimer, player.aimAngle);
-            }
+            // Draw the warrior sprite!
+            let flashFrame = (frame % 4 === 0);
+            warriorSprite.drawSprite(
+                ctx,
+                player.animState,
+                player.animFrame,
+                player.x,
+                player.y,
+                player.facing,
+                player.invincible > 0,
+                flashFrame
+            );
 
             ctx.restore();
 
@@ -691,120 +1056,6 @@
             rad.addColorStop(1, "rgba(0,0,0,0.6)");
             ctx.fillStyle = rad;
             ctx.fillRect(0,0,W,H);
-        }
-
-        function drawHuman(x, y, w, h, facing, state, timer, aimAngle) {
-            ctx.save();
-            ctx.translate(x, y);
-            
-            let renderFacing = Math.abs(aimAngle) > Math.PI/2 ? -1 : 1;
-            ctx.scale(renderFacing, 1);
-            let localAim = renderFacing === 1 ? aimAngle : Math.PI - aimAngle;
-
-            // Arm Swipe Logic
-            // If attacking, override aimAngle with a sweep
-            if (state === 'attack') {
-                // 0 to 20 frames. 
-                // Start: localAim - 0.5 rad
-                // End: localAim + 0.5 rad
-                let progress = timer / 20; // 0 to 1
-                let offset = (progress - 0.5) * 2.0; // -1.0 to 1.0 (approx 60 degrees sweep)
-                localAim += offset;
-            }
-
-            let headY = -h/2; let neckY = -h/2 + 10; let hipY = 0; let kneeY = 15; let footY = 28;
-            let armAngle = 0; let legAngle = 0; let bob = 0;
-
-            if (state === 'climb') {
-                legAngle = 0.5; // Spread legs
-                armAngle = -2.0; // Arms up holding wall
-            } else if (state === 'run') {
-                legAngle = Math.sin(timer * 0.3) * 0.8; bob = Math.abs(Math.sin(timer * 0.6)) * 2;
-            } else if (state === 'jump') {
-                legAngle = 0.5;
-            } else if (state === 'fall') {
-                legAngle = 0.2;
-            } else {
-                bob = Math.sin(timer * 0.1) * 1;
-            }
-
-            ctx.strokeStyle = "#fff"; ctx.lineCap = "round"; ctx.lineJoin = "round";
-
-            // Back Leg
-            ctx.lineWidth = 6; ctx.strokeStyle = "#555"; 
-            ctx.beginPath(); ctx.moveTo(0, hipY+bob); 
-            if (state === 'climb') {
-                 ctx.lineTo(10, kneeY+bob); ctx.lineTo(15, footY+bob); // Braced
-            } else {
-                ctx.lineTo(-Math.sin(legAngle)*10, kneeY+bob); ctx.lineTo(-Math.sin(legAngle)*15, footY+bob);
-            }
-            ctx.stroke();
-
-            // Back Arm
-            ctx.lineWidth = 5; ctx.beginPath(); 
-            ctx.moveTo(0, neckY+5+bob); 
-            if (state === 'climb') {
-                ctx.lineTo(-10, neckY-5+bob); ctx.lineTo(-15, neckY-15+bob);
-            } else {
-                ctx.lineTo(-5, neckY+15+bob); ctx.lineTo(-10, neckY+25+bob); 
-            }
-            ctx.stroke();
-
-            // Torso
-            ctx.fillStyle = "#1e2840"; 
-            ctx.beginPath(); ctx.moveTo(-6, neckY+bob); ctx.lineTo(6, neckY+bob); 
-            ctx.lineTo(4, hipY+bob); ctx.lineTo(-4, hipY+bob); ctx.fill();
-            ctx.fillStyle = "#d4af37"; ctx.fillRect(-2, neckY+bob, 4, 15);
-
-            // Head
-            ctx.fillStyle = "#ffccaa"; ctx.beginPath(); ctx.arc(0, headY+bob, 7, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#444"; ctx.beginPath(); ctx.arc(0, headY+bob-2, 7, Math.PI, 0); ctx.fill();
-
-            // Front Leg
-            ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; 
-            ctx.beginPath(); ctx.moveTo(0, hipY+bob); 
-            if (state === 'climb') {
-                 ctx.lineTo(8, kneeY+bob-5); ctx.lineTo(15, footY+bob-5); // Braced high
-            } else {
-                ctx.lineTo(Math.sin(legAngle)*10, kneeY+bob); ctx.lineTo(Math.sin(legAngle)*15, footY+bob);
-            }
-            ctx.stroke();
-
-            // Front Arm (AIMING/CLIMBING)
-            let shoulderX = 0; let shoulderY = neckY + 5 + bob;
-            
-            if (state === 'climb') {
-                 // Climbing arm
-                 ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); 
-                 ctx.lineTo(12, shoulderY-10); ctx.lineTo(18, shoulderY-20); ctx.stroke();
-            } else {
-                // IK/Aiming arm
-                let armLen = 22;
-                let handX = Math.cos(localAim) * armLen;
-                let handY = Math.sin(localAim) * armLen;
-                let elbowX = handX / 2; let elbowY = handY / 2 + 5; 
-
-                ctx.lineWidth = 5; ctx.strokeStyle = "#fff";
-                ctx.beginPath(); ctx.moveTo(shoulderX, shoulderY); 
-                ctx.lineTo(shoulderX + elbowX, shoulderY + elbowY); 
-                ctx.lineTo(shoulderX + handX, shoulderY + handY); ctx.stroke();
-
-                // Sword
-                ctx.save();
-                ctx.translate(shoulderX + handX, shoulderY + handY);
-                ctx.rotate(localAim + 1.5); 
-                ctx.fillStyle = "#d4af37"; ctx.fillRect(-2, -2, 4, 8); 
-                ctx.fillStyle = (player.buff === 'orange') ? "#ffaa00" : "#00ffff"; 
-                ctx.shadowBlur = 10; ctx.shadowColor = ctx.fillStyle;
-                ctx.fillRect(-1, -30, 2, 30);
-                ctx.restore();
-            }
-
-            if (player.buff === 'blue') {
-                ctx.strokeStyle = "#44f"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 35, 0, Math.PI*2); ctx.stroke();
-            }
-
-            ctx.restore();
         }
 
         function loop() {
