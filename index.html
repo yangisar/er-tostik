@@ -3,33 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Er Tostik: Deep Descent</title>
+    <title>Er Tostik: The Deepest Drop</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&display=swap');
 
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050510;
-            font-family: 'Cinzel', serif;
+            background-color: #000;
             touch-action: none;
             user-select: none;
             -webkit-user-select: none;
+            font-family: 'Cinzel', serif;
         }
 
-        #gameCanvas {
+        canvas {
             display: block;
             width: 100%;
             height: 100vh;
         }
 
-        /* UI Layer */
+        /* --- UI Overlay --- */
         #ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             pointer-events: none;
             display: flex;
             flex-direction: column;
@@ -38,97 +36,126 @@
 
         /* Top HUD */
         .hud-top {
-            padding: 20px;
+            padding: 15px;
             display: flex;
+            align-items: center;
             justify-content: space-between;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            height: 80px;
+        }
+
+        /* Health Bar Design */
+        .bar-container {
+            width: 150px;
+            height: 20px;
+            background: #222;
+            border: 2px solid #555;
+            transform: skewX(-20deg);
+            position: relative;
+            overflow: hidden;
+        }
+        .hp-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #8a0e0e, #ff4444);
+            transition: width 0.2s;
+        }
+        .hud-text {
             color: #d4af37;
-            font-size: 1rem;
-            text-shadow: 0 0 5px #000;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+            font-size: 1.2rem;
+            text-shadow: 0 0 10px #d4af37;
+            margin-bottom: 5px;
         }
 
-        .stat-box {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        /* Controls */
+        /* Controls Container */
         .controls-area {
-            height: 180px;
+            height: 220px;
             width: 100%;
             display: flex;
             justify-content: space-between;
             padding: 20px;
             box-sizing: border-box;
-            pointer-events: auto;
-            padding-bottom: 40px;
+            pointer-events: auto; 
+            padding-bottom: 30px;
         }
 
-        .btn-circle {
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(212, 175, 55, 0.5);
-            border-radius: 50%;
-            color: #d4af37;
+        /* Button Styling */
+        .btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            color: rgba(255, 255, 255, 0.7);
             display: flex;
             justify-content: center;
             align-items: center;
             font-size: 1.5rem;
-            backdrop-filter: blur(4px);
-            touch-action: manipulation;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            transition: transform 0.1s, background 0.1s;
         }
-
-        .btn-circle:active {
-            background: rgba(212, 175, 55, 0.4);
+        .btn:active {
+            background: rgba(212, 175, 55, 0.3);
+            border-color: #d4af37;
             transform: scale(0.95);
+            color: #fff;
         }
 
-        .d-pad { display: flex; gap: 15px; align-items: flex-end; }
-        .btn-move { width: 70px; height: 70px; font-size: 2rem; }
+        /* Left Control Cluster (D-PAD) */
+        .d-pad-grid {
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px;
+            gap: 10px;
+            align-items: end;
+        }
+        /* Positioning inside Grid */
+        #btn-jump { grid-column: 2; grid-row: 1; border-color: #00ffff; color: #00ffff; } /* Top Center */
+        #btn-left { grid-column: 1; grid-row: 2; } /* Bottom Left */
+        #btn-down { grid-column: 2; grid-row: 2; } /* Bottom Center */
+        #btn-right { grid-column: 3; grid-row: 2; } /* Bottom Right */
 
-        .action-pad { display: flex; gap: 15px; align-items: flex-end; }
-        .btn-atk { width: 90px; height: 90px; font-size: 2.5rem; border-color: #ff4444; color: #ff4444; }
-        .btn-jump { width: 60px; height: 60px; margin-bottom: 10px; }
+        /* Right Control (Combat) */
+        .combat-area {
+            display: flex;
+            align-items: flex-end;
+            padding-right: 10px;
+        }
+        #btn-atk {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            font-size: 3rem;
+            border-color: #ff4444;
+            color: #ff4444;
+            background: rgba(50, 0, 0, 0.3);
+        }
+        #btn-atk:active {
+            background: rgba(255, 0, 0, 0.4);
+            box-shadow: 0 0 20px #ff0000;
+        }
 
         /* Screens */
-        .screen-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(5, 5, 10, 0.95);
+        .overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5,5,10,0.95);
             display: flex; flex-direction: column;
             justify-content: center; align-items: center;
+            z-index: 20;
             color: #d4af37;
-            pointer-events: auto;
-            z-index: 10;
             text-align: center;
         }
         .hidden { display: none !important; }
-        
-        h1 { margin: 0 0 10px 0; font-size: 2rem; color: #fff; text-shadow: 0 0 10px #00ffff; }
-        p { color: #aaa; max-width: 80%; margin-bottom: 30px; line-height: 1.4; }
-        
         .main-btn {
-            padding: 15px 40px;
-            border: 2px solid #d4af37;
-            background: rgba(212, 175, 55, 0.1);
+            margin-top: 20px;
+            padding: 15px 50px;
+            font-family: 'Cinzel';
+            font-size: 1.5rem;
+            background: transparent;
             color: #d4af37;
-            font-family: 'Cinzel', serif;
-            font-size: 1.2rem;
-            text-transform: uppercase;
+            border: 2px solid #d4af37;
             cursor: pointer;
         }
-        .toast {
-            position: absolute;
-            top: 20%;
-            width: 100%;
-            text-align: center;
-            font-size: 1.5rem;
-            color: #fff;
-            text-shadow: 0 0 10px #fff;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
+
     </style>
 </head>
 <body>
@@ -137,547 +164,435 @@
 
     <div id="ui-layer">
         <div class="hud-top">
-            <div class="stat-box">
-                <div id="score">Depth: 0m</div>
-                <div id="armor-display" style="color: #aaa; font-size: 0.8rem;">Armor: 0</div>
+            <div>
+                <div class="hud-text">HP</div>
+                <div class="bar-container"><div id="hp-bar" class="hp-fill"></div></div>
             </div>
-            <div class="stat-box" style="align-items: flex-end;">
-                <div id="health">HP: 100</div>
-                <div id="weapon-display" style="color: #00ffff; font-size: 0.8rem;">Blade: Normal</div>
+            <div style="text-align: right;">
+                <div class="hud-text" style="font-size: 0.8rem; color: #aaa;">DEPTH</div>
+                <div id="score-disp" style="font-size: 2rem;">0m</div>
             </div>
         </div>
-
-        <div id="msg-toast" class="toast">ITEM ACQUIRED</div>
 
         <div class="controls-area">
-            <div class="d-pad">
-                <div class="btn-circle btn-move" id="btn-left">◄</div>
-                <div class="btn-circle btn-move" id="btn-right">►</div>
+            
+            <div class="d-pad-grid">
+                <div id="btn-jump" class="btn">▲</div>
+                <div id="btn-left" class="btn">◄</div>
+                <div id="btn-down" class="btn">▼</div>
+                <div id="btn-right" class="btn">►</div>
             </div>
-            <div class="action-pad">
-                <div class="btn-circle btn-jump" id="btn-jump">⭱</div>
-                <div class="btn-circle btn-atk" id="btn-atk">⚔</div>
+
+            <div class="combat-area">
+                <div id="btn-atk" class="btn">⚔</div>
             </div>
+
         </div>
     </div>
 
-    <div id="start-screen" class="screen-overlay">
-        <h1>ER TOSTIK</h1>
-        <p>The Spirits guide you.</p>
-        <p>Sides are blocked.<br>Fall on enemies to crush them.<br>Find flasks and ancient steel.</p>
-        <button class="main-btn" onclick="initGame()">Descend</button>
+    <div id="start-screen" class="overlay">
+        <h1 style="font-size: 3rem; margin-bottom: 0; text-shadow: 0 0 20px cyan;">ER TOSTIK</h1>
+        <h2 style="color: #aaa; margin-top: 0;">SHADOW DESCENT</h2>
+        <p>LEFT CONTROLS: Move, Jump, Crawl</p>
+        <p>RIGHT: Attack</p>
+        <p style="color: cyan;">Hold ▼ + ▲ to drop through floors</p>
+        <button class="main-btn" onclick="startGame()">BEGIN</button>
     </div>
 
-    <div id="game-over-screen" class="screen-overlay hidden">
-        <h1 style="color:#ff4444">SPIRIT BROKEN</h1>
-        <p id="final-score">Depth: 0m</p>
-        <button class="main-btn" onclick="initGame()">Rise Again</button>
+    <div id="game-over" class="overlay hidden">
+        <h1 style="color: #ff4444;">FALLEN</h1>
+        <p id="final-depth">0m</p>
+        <button class="main-btn" onclick="startGame()">RISE</button>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // --- Game Config ---
-        let width, height;
-        const GRAVITY = 0.6;
+        // --- Config ---
+        let W, H;
+        const GRAVITY = 0.5;
         const FRICTION = 0.8;
-        const MOVE_SPEED = 6;
-        const JUMP_FORCE = -14;
+        const WALL_THICKNESS = 30;
         
         // --- State ---
-        let gameRunning = false;
-        let cameraY = 0;
+        let gameActive = false;
+        let camY = 0;
         let maxDepth = 0;
-        let inputs = { left: false, right: false, jump: false, attack: false };
-        let particles = [];
+        let inputs = { left: false, right: false, up: false, down: false, atk: false };
         
-        // --- Entities ---
-        let player = {
-            x: 0, y: 0, w: 20, h: 40,
-            vx: 0, vy: 0,
-            hp: 100,
-            maxHp: 100,
-            armor: 0,
-            attackRange: 40,
-            attackLevel: 1,
-            facing: 1, 
-            attackCooldown: 0,
-            isAttacking: false,
-            grounded: false,
-            invincible: 0
-        };
-
+        // --- Assets (Procedural) ---
+        let particles = [];
         let platforms = [];
         let enemies = [];
-        let items = [];
-
-        // --- Input Handling ---
-        const bindBtn = (id, key) => {
-            const el = document.getElementById(id);
-            const start = (e) => { e.preventDefault(); inputs[key] = true; };
-            const end = (e) => { e.preventDefault(); inputs[key] = false; };
-            el.addEventListener('mousedown', start);
-            el.addEventListener('mouseup', end);
-            el.addEventListener('touchstart', start);
-            el.addEventListener('touchend', end);
-        };
-
-        bindBtn('btn-left', 'left');
-        bindBtn('btn-right', 'right');
         
-        const jumpBtn = document.getElementById('btn-jump');
-        const doJump = (e) => { e.preventDefault(); if(player.grounded) player.vy = JUMP_FORCE; };
-        jumpBtn.addEventListener('touchstart', doJump);
-        jumpBtn.addEventListener('mousedown', doJump);
-
-        const atkBtn = document.getElementById('btn-atk');
-        const doAttack = (e) => {
-            e.preventDefault();
-            if(player.attackCooldown <= 0) {
-                player.isAttacking = true;
-                player.attackCooldown = 20;
-                checkCombat();
-            }
+        let player = {
+            x: 0, y: 0, w: 30, h: 50, // Bigger player
+            vx: 0, vy: 0,
+            hp: 100,
+            facing: 1,
+            state: 'idle', // idle, run, jump, crawl
+            grounded: false,
+            invincible: 0,
+            atkTimer: 0,
+            dropTimer: 0, // For dropping through platforms
+            scarf: [] // Array of points for scarf physics
         };
-        atkBtn.addEventListener('touchstart', doAttack);
-        atkBtn.addEventListener('mousedown', doAttack);
 
-        // Keyboard
+        // --- Input System ---
+        function bind(id, k) {
+            const b = document.getElementById(id);
+            const press = (e) => { e.preventDefault(); inputs[k] = true; };
+            const release = (e) => { e.preventDefault(); inputs[k] = false; };
+            b.addEventListener('mousedown', press); b.addEventListener('mouseup', release);
+            b.addEventListener('touchstart', press); b.addEventListener('touchend', release);
+            b.addEventListener('mouseleave', release);
+        }
+        bind('btn-left', 'left');
+        bind('btn-right', 'right');
+        bind('btn-jump', 'up');
+        bind('btn-down', 'down');
+        bind('btn-atk', 'atk');
+
         window.addEventListener('keydown', e => {
-            if(e.key === 'ArrowLeft') inputs.left = true;
-            if(e.key === 'ArrowRight') inputs.right = true;
-            if(e.key === ' ' && player.grounded) player.vy = JUMP_FORCE;
-            if(e.key === 'z') doAttack(e);
+            if(e.key==='ArrowLeft') inputs.left=true;
+            if(e.key==='ArrowRight') inputs.right=true;
+            if(e.key==='ArrowUp') inputs.up=true;
+            if(e.key==='ArrowDown') inputs.down=true;
+            if(e.key==='z') inputs.atk=true;
         });
         window.addEventListener('keyup', e => {
-            if(e.key === 'ArrowLeft') inputs.left = false;
-            if(e.key === 'ArrowRight') inputs.right = false;
+            if(e.key==='ArrowLeft') inputs.left=false;
+            if(e.key==='ArrowRight') inputs.right=false;
+            if(e.key==='ArrowUp') inputs.up=false;
+            if(e.key==='ArrowDown') inputs.down=false;
+            if(e.key==='z') inputs.atk=false;
         });
 
-        // --- Core Functions ---
-
+        // --- Core ---
         function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width;
-            canvas.height = height;
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = W;
+            canvas.height = H;
         }
         window.addEventListener('resize', resize);
         resize();
 
-        function showToast(msg, color) {
-            const t = document.getElementById('msg-toast');
-            t.innerText = msg;
-            t.style.color = color;
-            t.style.opacity = 1;
-            setTimeout(() => t.style.opacity = 0, 1500);
-        }
-
-        function initGame() {
+        function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('game-over-screen').classList.add('hidden');
+            document.getElementById('game-over').classList.add('hidden');
             
-            player.x = width / 2;
+            player.x = W/2;
             player.y = 100;
-            player.vx = 0; 
-            player.vy = 0;
+            player.vx = 0; player.vy = 0;
             player.hp = 100;
-            player.armor = 0;
-            player.attackLevel = 1;
-            player.attackRange = 40;
-            cameraY = 0;
-            maxDepth = 0;
-            
+            player.scarf = [];
+            for(let i=0; i<5; i++) player.scarf.push({x:player.x, y:player.y});
+
             platforms = [];
             enemies = [];
-            items = [];
             particles = [];
-            
+            camY = 0;
+            maxDepth = 0;
+
+            // Generate Walls
+            // We simulate walls by just checking X bounds, but visual drawing will be handled in render
+
             // Start Platform
-            createPlatform(width/2 - 100, 200, 200);
-            
-            // Generate world ahead
-            generateWorld(200, 2000);
-            
-            gameRunning = true;
-            requestAnimationFrame(gameLoop);
+            platforms.push({x: W/2 - 100, y: 250, w: 200, type: 'stone'});
+            genWorld(300, 1500);
+
+            gameActive = true;
+            loop();
         }
 
-        function createPlatform(x, y, w) {
-            // Generate jagged edges for natural look
-            let points = [];
-            let segments = 10;
-            let segmentWidth = w / segments;
-            for(let i=0; i<=segments; i++) {
-                points.push({
-                    x: x + (i * segmentWidth),
-                    y: y + (Math.random() * 10 - 5) // Roughness
-                });
-            }
-            platforms.push({x, y, w, h: 30, points: points});
-        }
-
-        function generateWorld(startY, endY) {
-            let y = startY;
-            while(y < endY) {
-                y += 80 + Math.random() * 120; // Vertical Gap
-                let w = 100 + Math.random() * 150;
-                let x = Math.random() * (width - w);
+        function genWorld(sy, ey) {
+            let y = sy;
+            while(y < ey) {
+                y += 80 + Math.random() * 100;
+                let w = 80 + Math.random() * 150;
+                let x = WALL_THICKNESS + Math.random() * (W - w - WALL_THICKNESS*2);
                 
-                createPlatform(x, y, w);
+                platforms.push({x, y, w, type: 'stone'});
 
-                // Add Enemy (Increasing chance with depth)
+                // Enemy
                 if (Math.random() < 0.4) {
                     enemies.push({
-                        x: x + w/2,
-                        y: y - 40,
-                        w: 30, h: 30,
-                        patrolStart: x,
-                        patrolEnd: x + w,
-                        vx: 1 + Math.random(),
-                        hp: 1,
-                        type: 'shadow'
-                    });
-                }
-
-                // Add Item (10% chance)
-                if (Math.random() < 0.15) {
-                    let type = Math.random();
-                    let itemType = 'health';
-                    if (type > 0.6) itemType = 'armor';
-                    if (type > 0.9) itemType = 'weapon';
-                    
-                    items.push({
-                        x: x + w/2,
-                        y: y - 30,
-                        type: itemType,
-                        bobOffset: Math.random() * 10
+                        x: x + w/2, y: y-20, 
+                        vx: 1, hp: 1, 
+                        patrol: [x, x+w]
                     });
                 }
             }
-        }
-
-        function checkCombat() {
-            let hitX = player.x + (player.facing * (20 + player.attackRange/2));
-            let hitY = player.y;
-            
-            // Visual Slash
-            for(let i=0; i<8; i++) createParticle(hitX, hitY, '#00ffff', 6);
-
-            enemies.forEach((en, i) => {
-                let dx = en.x - player.x;
-                let dy = en.y - en.y; // Height diff negligible for simple hitbox
-                let dist = Math.sqrt(Math.pow(en.x - player.x, 2) + Math.pow(en.y - player.y, 2));
-                
-                // Attack Hit Logic
-                if (dist < player.attackRange + 20 && Math.sign(dx) === player.facing) {
-                    en.hp--;
-                    // Blood effect
-                    for(let k=0; k<10; k++) createParticle(en.x, en.y, '#ff0000', 4);
-                }
-            });
-        }
-
-        function createParticle(x, y, col, speed) {
-            particles.push({
-                x, y, col,
-                vx: (Math.random() - 0.5) * speed,
-                vy: (Math.random() - 0.5) * speed,
-                life: 1.0
-            });
         }
 
         function update() {
-            if (!gameRunning) return;
-
-            // --- Player Physics ---
+            // -- Physics --
             if (inputs.left) { player.vx -= 0.8; player.facing = -1; }
             if (inputs.right) { player.vx += 0.8; player.facing = 1; }
             
+            // Crawl Logic
+            if (inputs.down && player.grounded) {
+                player.state = 'crawl';
+                player.vx *= 0.5; // Slow move when crawling
+                player.h = 30; // Shrink
+            } else {
+                player.h = 50; // Normal height
+                player.state = 'idle';
+            }
+
+            // Drop Through Platform
+            if (inputs.down && inputs.up && player.grounded) {
+                player.grounded = false;
+                player.y += 5; // Nudge down through platform
+                player.dropTimer = 10; // Disable collisions briefly
+            } 
+            // Jump
+            else if (inputs.up && player.grounded && !inputs.down) {
+                player.vy = -13;
+                player.grounded = false;
+                // Dust
+                for(let i=0; i<5; i++) spawnPart(player.x, player.y+25, '#888', 2);
+            }
+
+            // Attack
+            if (inputs.atk && player.atkTimer <= 0) {
+                player.atkTimer = 15;
+                // Spawn Slash
+                let hitX = player.x + (player.facing * 40);
+                spawnPart(hitX, player.y, '#0ff', 10);
+                
+                // Hit Check
+                enemies.forEach(e => {
+                    if (Math.hypot(e.x - player.x, e.y - player.y) < 60) {
+                        e.hp = 0;
+                        spawnPart(e.x, e.y, '#f00', 5);
+                    }
+                });
+            }
+            if (player.atkTimer > 0) player.atkTimer--;
+            if (player.dropTimer > 0) player.dropTimer--;
+
+            // Apply Physics
             player.vx *= FRICTION;
             player.vy += GRAVITY;
-            
-            // Limit horizontal speed
-            if(player.vx > MOVE_SPEED) player.vx = MOVE_SPEED;
-            if(player.vx < -MOVE_SPEED) player.vx = -MOVE_SPEED;
-
             player.x += player.vx;
             player.y += player.vy;
 
-            // ** BOUNDARIES ** if (player.x < 0) { player.x = 0; player.vx = 0; }
-            if (player.x > width) { player.x = width; player.vx = 0; }
+            // -- Walls (Borders) --
+            if (player.x < WALL_THICKNESS + 10) { player.x = WALL_THICKNESS + 10; player.vx = 0; }
+            if (player.x > W - WALL_THICKNESS - 10) { player.x = W - WALL_THICKNESS - 10; player.vx = 0; }
 
-            // Cooldowns
-            if (player.attackCooldown > 0) player.attackCooldown--;
-            if (player.isAttacking && player.attackCooldown < 15) player.isAttacking = false;
-            if (player.invincible > 0) player.invincible--;
-
-            // --- Collisions ---
+            // -- Platform Collisions --
             player.grounded = false;
-            
-            // Platform Collision
-            platforms.forEach(p => {
-                // Check if feet interact with platform top
-                if (player.vy > 0 && 
-                    player.y + 20 >= p.y - 10 && 
-                    player.y + 20 <= p.y + 20 && 
-                    player.x >= p.x && 
-                    player.x <= p.x + p.w) {
+            if (player.dropTimer === 0 && player.vy > 0) {
+                platforms.forEach(p => {
+                    if (player.x > p.x - 10 && player.x < p.x + p.w + 10 &&
+                        player.y + player.h/2 >= p.y - 10 && 
+                        player.y + player.h/2 <= p.y + 10) {
                         
-                    player.grounded = true;
-                    player.vy = 0;
-                    player.y = p.y - 20; // Place on top
+                        player.grounded = true;
+                        player.vy = 0;
+                        player.y = p.y - player.h/2;
+                    }
+                });
+            }
+
+            // -- Scarf Physics --
+            let headX = player.x - (player.facing * 5);
+            let headY = player.y - 15;
+            player.scarf[0] = {x: headX, y: headY};
+            for(let i=1; i<player.scarf.length; i++) {
+                let prev = player.scarf[i-1];
+                let curr = player.scarf[i];
+                curr.x += (prev.x - curr.x) * 0.3 + (player.vx * -0.1);
+                curr.y += (prev.y - curr.y) * 0.3 + (player.vy * -0.1) + 1; // Gravity on scarf
+            }
+
+            // -- Enemies --
+            enemies.forEach((e, i) => {
+                if(e.hp <= 0) { enemies.splice(i,1); return; }
+                
+                // Patrol
+                e.x += e.vx;
+                if(e.x < e.patrol[0] || e.x > e.patrol[1]) e.vx *= -1;
+
+                // Hit Player
+                let dist = Math.hypot(player.x - e.x, player.y - e.y);
+                if (dist < 30 && player.invincible <= 0) {
+                    player.hp -= 20;
+                    player.invincible = 60;
+                    player.vy = -5;
+                    player.vx = -player.facing * 10;
+                    spawnPart(player.x, player.y, '#f00', 5);
                 }
             });
+            if(player.invincible > 0) player.invincible--;
+            if(player.hp <= 0) gameOver();
 
-            // Enemy Logic
-            for (let i = enemies.length - 1; i >= 0; i--) {
-                let en = enemies[i];
-                
-                if (en.hp <= 0) {
-                    // Loot drop chance on kill (30%)
-                    if(Math.random() < 0.3) items.push({x: en.x, y: en.y, type: 'health', bobOffset:0});
-                    enemies.splice(i, 1);
-                    continue;
-                }
-
-                // Patrol
-                en.x += en.vx;
-                if (en.x > en.patrolEnd || en.x < en.patrolStart) en.vx *= -1;
-
-                // Collision with Player
-                let dx = player.x - en.x;
-                let dy = player.y - en.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
-                
-                if (dist < 35) {
-                    // ** STOMP MECHANIC **
-                    // If player is falling and is above enemy
-                    if (player.vy > 2 && player.y < en.y - 10) {
-                        en.hp = 0;
-                        player.vy = -8; // Bounce up
-                        createParticle(en.x, en.y, '#fff', 8); // Smash effect
-                        showToast("CRUSHED!", "#fff");
-                    } 
-                    // Getting Hurt
-                    else if (player.invincible <= 0) {
-                        let dmg = 20 - player.armor;
-                        if (dmg < 5) dmg = 5;
-                        player.hp -= dmg;
-                        player.invincible = 60;
-                        player.vy = -5;
-                        player.vx = -Math.sign(dx) * 8;
-                        createParticle(player.x, player.y, '#ff0000', 5);
-                    }
-                }
-            }
-
-            // Item Logic
-            for (let i = items.length - 1; i >= 0; i--) {
-                let it = items[i];
-                let dist = Math.hypot(player.x - it.x, player.y - it.y);
-                
-                if (dist < 30) {
-                    // Pickup
-                    if (it.type === 'health') {
-                        player.hp = Math.min(100, player.hp + 30);
-                        showToast("HEALTH +30", "#ff4444");
-                    } else if (it.type === 'armor') {
-                        player.armor = Math.min(15, player.armor + 5);
-                        showToast("ARMOR UP", "#ffd700");
-                    } else if (it.type === 'weapon') {
-                        player.attackLevel++;
-                        player.attackRange += 10;
-                        showToast("BLADE SHARPENED", "#00ffff");
-                    }
-                    items.splice(i, 1);
-                }
-            }
-
-            // Death Check
-            if (player.hp <= 0) {
-                gameRunning = false;
-                document.getElementById('game-over-screen').classList.remove('hidden');
-                document.getElementById('final-score').innerText = `Depth: ${Math.floor(maxDepth)}m`;
-            }
-
-            // --- Camera & Gen ---
-            let targetCamY = player.y - height * 0.4;
-            if (targetCamY > cameraY) cameraY = targetCamY;
+            // -- Camera --
+            let targetY = player.y - H * 0.4;
+            if (targetY > camY) camY = targetY;
+            
+            // World Gen
             if (player.y > maxDepth) maxDepth = player.y;
-
-            let deepestPlatform = platforms[platforms.length-1].y;
-            if (deepestPlatform < cameraY + height * 2) {
-                generateWorld(deepestPlatform, deepestPlatform + 1000);
-            }
+            if (platforms[platforms.length-1].y < camY + H*1.5) genWorld(platforms[platforms.length-1].y, platforms[platforms.length-1].y + 1000);
 
             // Cleanup
-            if (platforms[0].y < cameraY - 100) platforms.shift();
-            enemies = enemies.filter(e => e.y > cameraY - 100);
-            items = items.filter(i => i.y > cameraY - 100);
-
-            // Particles
-            particles.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.05;
-                if(p.life <= 0) particles.splice(i, 1);
-            });
+            if(platforms[0].y < camY - 100) platforms.shift();
 
             // UI
-            document.getElementById('score').innerText = `Depth: ${Math.floor(maxDepth/10)}m`;
-            document.getElementById('health').innerText = `HP: ${player.hp}`;
-            document.getElementById('armor-display').innerText = `Armor: ${player.armor}`;
-            let wpnTxt = player.attackLevel === 1 ? "Rusty" : (player.attackLevel === 2 ? "Forged" : "Spirit");
-            document.getElementById('weapon-display').innerText = `Blade: ${wpnTxt}`;
+            document.getElementById('hp-bar').style.width = player.hp + "%";
+            document.getElementById('score-disp').innerText = Math.floor(maxDepth/10) + "m";
         }
 
-        // --- Drawing ---
-
-        function drawEnvironment() {
-            // Background Gradient based on depth
-            let depthFactor = Math.min(1, maxDepth / 10000);
-            let r = 5 + (depthFactor * 40); // Becomes slightly redder
-            let b = 16 - (depthFactor * 10); // Loses blue
-            
-            let bg = ctx.createLinearGradient(0, 0, 0, height);
-            bg.addColorStop(0, `rgb(${r}, 5, ${b})`);
-            bg.addColorStop(1, `rgb(${r*2}, 10, ${b*2})`);
-            
-            ctx.fillStyle = bg;
-            ctx.fillRect(0, 0, width, height);
-        }
-
-        function drawPlatforms() {
-            ctx.fillStyle = "#1a1a2e";
-            ctx.strokeStyle = "#3e3e5e";
-            ctx.lineWidth = 2;
-
-            platforms.forEach(p => {
-                ctx.beginPath();
-                let pts = p.points;
-                ctx.moveTo(pts[0].x, pts[0].y);
-                for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-                
-                ctx.lineTo(p.x + p.w, p.y + p.h);
-                ctx.lineTo(p.x, p.y + p.h);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Draw just top jagged line highlight
-                ctx.beginPath();
-                ctx.moveTo(pts[0].x, pts[0].y);
-                for(let i=1; i<pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-                ctx.stroke();
-            });
-        }
-
-        function drawItems() {
-            items.forEach(it => {
-                let y = it.y + Math.sin((Date.now() / 200) + it.bobOffset) * 5;
-                
-                if (it.type === 'health') {
-                    ctx.fillStyle = "#ff0000";
-                    ctx.beginPath(); ctx.arc(it.x, y, 6, 0, Math.PI*2); ctx.fill();
-                    // Cross
-                    ctx.fillStyle = "#fff";
-                    ctx.fillRect(it.x-2, y-6, 4, 12); ctx.fillRect(it.x-6, y-2, 12, 4);
-                } else if (it.type === 'armor') {
-                    ctx.fillStyle = "#ffd700";
-                    ctx.beginPath(); ctx.moveTo(it.x, y+8); ctx.lineTo(it.x+7, y-5); ctx.lineTo(it.x-7, y-5); ctx.fill();
-                } else {
-                    ctx.fillStyle = "#00ffff";
-                    ctx.fillRect(it.x-2, y-10, 4, 20);
-                }
-            });
-        }
-
-        function drawPlayer() {
-            ctx.save();
-            ctx.translate(player.x, player.y);
-            
-            // ** VISUAL CONTRAST **
-            // Glow behind player
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "cyan";
-            
-            // I-Frame blink
-            if (player.invincible > 0 && Math.floor(Date.now()/50)%2==0) ctx.globalAlpha = 0.5;
-
-            // Body (White/Cyan Spirit Form)
-            ctx.fillStyle = "#e0ffff";
-            ctx.beginPath(); ctx.arc(0, -15, 8, 0, Math.PI*2); ctx.fill(); // Head
-            ctx.fillRect(-5, -8, 10, 24); // Torso
-
-            // Animated Legs
-            if (!player.grounded) {
-                // Falling pose
-                ctx.fillRect(-6, 12, 4, 10); ctx.fillRect(2, 8, 4, 8);
-            } else if (Math.abs(player.vx) > 0.5) {
-                // Running
-                let leg = Math.sin(Date.now() / 60) * 8;
-                ctx.fillRect(-6 + leg, 12, 4, 12);
-                ctx.fillRect(2 - leg, 12, 4, 12);
-            } else {
-                // Idle
-                ctx.fillRect(-6, 12, 4, 12); ctx.fillRect(2, 12, 4, 12);
-            }
-
-            // Weapon
-            ctx.save();
-            ctx.translate(0, -5);
-            let angle = player.isAttacking ? (player.facing * Math.PI/2) : (player.facing * -0.2);
-            ctx.rotate(angle);
-            
-            // Sword Glow
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = player.attackLevel > 1 ? "#00ffff" : "#fff";
-            ctx.fillStyle = player.attackLevel > 1 ? "#00ffff" : "#aaa";
-            
-            ctx.fillRect(0, -2, player.attackRange, 4); // Blade
-            ctx.fillStyle = "#d4af37";
-            ctx.fillRect(0, -4, 4, 8); // Hilt
-            ctx.restore();
-
-            ctx.restore();
+        function spawnPart(x, y, c, s) {
+            particles.push({x, y, c, vx: (Math.random()-0.5)*s, vy: (Math.random()-0.5)*s, l: 1});
         }
 
         function draw() {
-            drawEnvironment();
-            
+            // 1. Background (Dark Void)
+            ctx.fillStyle = "#050508";
+            ctx.fillRect(0,0,W,H);
+
+            // Parallax Stars
+            ctx.fillStyle = "#333";
+            for(let i=0; i<50; i++) {
+                let sy = ((i * 137) + camY * 0.5) % H;
+                let sx = (i * 93) % W;
+                ctx.fillRect(sx, sy, 2, 2);
+            }
+
             ctx.save();
-            ctx.translate(0, -cameraY);
+            ctx.translate(0, -camY);
 
-            drawPlatforms();
-            drawItems();
+            // 2. Walls (Textured)
+            ctx.fillStyle = "#111"; // Dark Rock
+            ctx.fillRect(0, camY, WALL_THICKNESS, H);
+            ctx.fillRect(W - WALL_THICKNESS, camY, WALL_THICKNESS, H);
+            
+            // Wall Texture (Stripes)
+            ctx.strokeStyle = "#222";
+            ctx.beginPath();
+            for(let y=Math.floor(camY/50)*50; y<camY+H; y+=50) {
+                ctx.moveTo(0, y); ctx.lineTo(WALL_THICKNESS, y+20);
+                ctx.moveTo(W, y); ctx.lineTo(W-WALL_THICKNESS, y+20);
+            }
+            ctx.stroke();
 
-            enemies.forEach(e => {
-                ctx.fillStyle = "#000"; // Silhouette
-                ctx.shadowBlur = 5; ctx.shadowColor = "#f0f";
-                ctx.beginPath(); ctx.arc(e.x, e.y, 12, 0, Math.PI*2); ctx.fill();
-                // Red Eyes
-                ctx.fillStyle = "red"; ctx.shadowBlur = 0;
-                ctx.fillRect(e.x + (Math.sign(e.vx)*4), e.y - 4, 4, 2);
+            // 3. Platforms
+            platforms.forEach(p => {
+                // Glow
+                ctx.shadowBlur = 10; ctx.shadowColor = "#2a2a40";
+                ctx.fillStyle = "#1a1a2e";
+                ctx.fillRect(p.x, p.y, p.w, 10);
+                ctx.shadowBlur = 0;
+                
+                // Detail
+                ctx.fillStyle = "#4a4a6e";
+                ctx.fillRect(p.x, p.y, p.w, 2);
             });
 
-            drawPlayer();
+            // 4. Enemies
+            enemies.forEach(e => {
+                ctx.fillStyle = "#000";
+                ctx.beginPath(); ctx.arc(e.x, e.y, 15, 0, Math.PI*2); ctx.fill();
+                // Eyes
+                ctx.fillStyle = "#ff0044";
+                ctx.shadowBlur = 5; ctx.shadowColor = "red";
+                ctx.fillRect(e.x + (Math.sign(e.vx)*6), e.y-5, 4, 3);
+                ctx.shadowBlur = 0;
+            });
 
-            particles.forEach(p => {
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.col;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill();
+            // 5. Player (Maximized Visuals)
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            ctx.scale(player.facing, 1); // Flip all drawing
+            
+            if (player.invincible > 0 && Math.floor(Date.now()/50)%2==0) ctx.globalAlpha = 0.3;
+
+            // Scarf (Draw relative to player 0,0)
+            ctx.strokeStyle = "#00ffff";
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10; ctx.shadowColor = "cyan";
+            ctx.beginPath();
+            player.scarf.forEach((p, i) => {
+                // Transform global scarf points to local space for flipping
+                let lx = (p.x - player.x) * player.facing; 
+                let ly = p.y - player.y;
+                if(i===0) ctx.moveTo(lx, ly);
+                else ctx.lineTo(lx, ly);
+            });
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Body
+            ctx.fillStyle = "#e0f7fa";
+            if (player.state === 'crawl') {
+                ctx.fillRect(-10, 10, 20, 15); // Crawling shape
+            } else {
+                ctx.fillRect(-8, -10, 16, 35); // Standing
+            }
+            
+            // Head
+            ctx.fillStyle = "#fff";
+            ctx.beginPath(); ctx.arc(0, -15, 10, 0, Math.PI*2); ctx.fill();
+
+            // Sword
+            if (player.atkTimer > 0) {
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 4;
+                ctx.shadowBlur = 20; ctx.shadowColor = "#fff";
+                ctx.beginPath();
+                ctx.moveTo(10, 0); ctx.lineTo(60, 0); // Big swing
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            } else {
+                // Sheathed/Idle Sword
+                ctx.fillStyle = "#aaa";
+                ctx.fillRect(-5, 5, 20, 4);
+            }
+
+            ctx.restore();
+
+            // 6. Particles
+            particles.forEach((p,i) => {
+                p.x += p.vx; p.y += p.vy; p.l -= 0.1;
+                ctx.fillStyle = p.c; ctx.globalAlpha = p.l;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                if(p.l<=0) particles.splice(i,1);
             });
             ctx.globalAlpha = 1;
 
             ctx.restore();
+
+            // 7. Lighting Overlay (Vignette)
+            // Create a gradient relative to screen center (simulates player light)
+            let lightX = W/2; 
+            let lightY = (player.y - camY); 
+
+            let grad = ctx.createRadialGradient(lightX, lightY, 50, lightX, lightY, 600);
+            grad.addColorStop(0, "rgba(0,0,0,0)"); // Transparent center
+            grad.addColorStop(0.3, "rgba(5,5,15,0.3)");
+            grad.addColorStop(1, "rgba(0,0,0,0.95)"); // Pitch black edges
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
         }
 
-        function gameLoop() {
-            if(!gameRunning) return;
-            update();
-            draw();
-            requestAnimationFrame(gameLoop);
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('game-over').classList.remove('hidden');
+            document.getElementById('final-depth').innerText = Math.floor(maxDepth/10) + "m";
+        }
+
+        function loop() {
+            if(gameActive) {
+                update();
+                draw();
+                requestAnimationFrame(loop);
+            }
         }
 
     </script>
