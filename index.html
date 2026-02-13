@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Er Tostik: Descent</title>
+    <title>Er Tostik: Warrior's Descent</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap');
 
         body {
             margin: 0;
             overflow: hidden;
-            background-color: #050510; /* Deep Indigo base */
+            background-color: #050510;
             font-family: 'Cinzel', serif;
-            color: #d4af37; /* Muted Gold */
-            touch-action: none; /* Prevents scrolling on mobile */
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         #gameCanvas {
@@ -22,6 +23,7 @@
             height: 100vh;
         }
 
+        /* UI Overlay */
         #ui-layer {
             position: absolute;
             top: 0;
@@ -32,109 +34,110 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 20px;
-            box-sizing: border-box;
         }
 
+        /* Top HUD */
         .hud-top {
+            padding: 20px;
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            color: #d4af37;
+            font-size: 1.2rem;
+            text-shadow: 0 0 5px #000;
         }
 
-        .soul-meter {
-            text-align: right;
-        }
-
-        .energy-bar-container {
-            width: 100px;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.2);
-            margin-top: 5px;
-            border: 1px solid #d4af37;
-        }
-
-        .energy-fill {
-            height: 100%;
-            background: #d4af37;
+        /* Bottom Controls Container */
+        .controls-area {
+            height: 180px;
             width: 100%;
-            transition: width 0.1s;
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+            pointer-events: auto; /* Enable touch here */
+            padding-bottom: 40px;
         }
 
-        #start-screen, #game-over-screen {
+        /* Buttons */
+        .btn-circle {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(212, 175, 55, 0.5);
+            border-radius: 50%;
+            color: #d4af37;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            backdrop-filter: blur(4px);
+            touch-action: manipulation;
+        }
+
+        .btn-circle:active {
+            background: rgba(212, 175, 55, 0.4);
+            transform: scale(0.95);
+        }
+
+        /* Left Side (Movement) */
+        .d-pad {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .btn-move {
+            width: 70px;
+            height: 70px;
+            font-size: 2rem;
+        }
+
+        /* Right Side (Combat) */
+        .action-pad {
+            display: flex;
+            gap: 15px;
+            align-items: flex-end;
+        }
+        .btn-atk {
+            width: 90px;
+            height: 90px;
+            font-size: 2.5rem;
+            border-color: #ff4444;
+            color: #ff4444;
+        }
+        .btn-jump {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+
+        /* Game Over / Start */
+        .screen-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(5, 5, 16, 0.9);
+            background: rgba(5, 5, 10, 0.95);
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            text-align: center;
+            color: #d4af37;
             pointer-events: auto;
             z-index: 10;
         }
-
-        h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-            text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
-            letter-spacing: 2px;
-        }
-
-        p {
-            font-size: 1rem;
-            color: #a0a0b0;
-            max-width: 80%;
-            line-height: 1.4;
-        }
-
-        .btn {
-            margin-top: 30px;
+        .hidden { display: none !important; }
+        
+        h1 { margin: 0 0 10px 0; font-size: 2rem; }
+        p { color: #aaa; max-width: 80%; text-align: center; margin-bottom: 30px; }
+        
+        .main-btn {
             padding: 15px 40px;
-            background: transparent;
             border: 2px solid #d4af37;
+            background: transparent;
             color: #d4af37;
             font-family: 'Cinzel', serif;
             font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.3s;
             text-transform: uppercase;
         }
-
-        .btn:active {
-            background: #d4af37;
-            color: #050510;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        .weight-indicator {
-            font-size: 0.8rem;
-            opacity: 0.8;
-        }
-
-        #depth-display {
-            font-size: 1.5rem;
-            font-weight: bold;
-        }
-        
-        .layer-toast {
-            position: absolute;
-            top: 30%;
-            width: 100%;
-            text-align: center;
-            font-size: 2rem;
-            color: rgba(255, 255, 255, 0.8);
-            text-shadow: 0 0 20px #fff;
-            opacity: 0;
-            transition: opacity 1s;
-        }
-
     </style>
 </head>
 <body>
@@ -143,413 +146,438 @@
 
     <div id="ui-layer">
         <div class="hud-top">
-            <div id="depth-display">0m</div>
-            <div class="soul-meter">
-                <div class="weight-indicator">SOUL WEIGHT</div>
-                <div id="speed-display">NORMAL</div>
-                <div class="energy-bar-container">
-                    <div id="dash-bar" class="energy-fill"></div>
-                </div>
+            <div id="score">Depth: 0m</div>
+            <div id="health">HP: 100</div>
+        </div>
+
+        <div class="controls-area">
+            <div class="d-pad">
+                <div class="btn-circle btn-move" id="btn-left">◄</div>
+                <div class="btn-circle btn-move" id="btn-right">►</div>
+            </div>
+            <div class="action-pad">
+                <div class="btn-circle btn-jump" id="btn-jump">⭱</div>
+                <div class="btn-circle btn-atk" id="btn-atk">⚔</div>
             </div>
         </div>
-        <div id="layer-msg" class="layer-toast">EARTH LAYER</div>
     </div>
 
-    <div id="start-screen">
-        <h1>ER TOSTIK:<br>DESCENT</h1>
-        <p>Drag to Move. Tap to Dash.</p>
-        <p>Avoid the shadows.<br>Collect Light to slow your fall.<br>Darkness makes you heavy.</p>
-        <button class="btn" onclick="startGame()">Descend</button>
+    <div id="start-screen" class="screen-overlay">
+        <h1>ER TOSTIK</h1>
+        <p>The Underworld Awaits.</p>
+        <p>Use arrows to Move.<br>Sword to slay Shadows.<br>Descend to find the lost.</p>
+        <button class="main-btn" onclick="initGame()">Enter</button>
     </div>
 
-    <div id="game-over-screen" class="hidden">
-        <h1 style="color: #8a0e0e;">LOST</h1>
-        <p id="final-depth">Depth: 0m</p>
-        <p>The underworld claims another soul.</p>
-        <button class="btn" onclick="resetGame()">Rise Again</button>
+    <div id="game-over-screen" class="screen-overlay hidden">
+        <h1 style="color:#ff4444">DEFEATED</h1>
+        <p id="final-score">Depth: 0m</p>
+        <button class="main-btn" onclick="initGame()">Revive</button>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+
+        // --- Game Config ---
+        let width, height;
+        const GRAVITY = 0.6;
+        const FRICTION = 0.8;
+        const MOVE_SPEED = 5;
+        const JUMP_FORCE = -12;
         
-        // Game State
-        let gameActive = false;
-        let score = 0; // Depth
-        let speed = 5; // Vertical speed
-        let baseSpeed = 5;
-        let lastTime = 0;
-        let layer = 0; // 0: Earth, 1: Forgotten, 2: Spirit
+        // --- State ---
+        let gameRunning = false;
+        let cameraY = 0;
+        let score = 0;
+        let inputs = { left: false, right: false, jump: false, attack: false };
+        let particles = [];
         
-        // Player
-        const player = {
-            x: 0,
-            y: 0,
-            radius: 10,
-            color: '#fff',
-            energy: 100,
-            dashing: false,
-            trail: []
+        // --- Entities ---
+        let player = {
+            x: 0, y: 0, w: 20, h: 40,
+            vx: 0, vy: 0,
+            hp: 100,
+            facing: 1, // 1 right, -1 left
+            attackCooldown: 0,
+            isAttacking: false,
+            grounded: false,
+            invincible: 0
         };
 
-        // Entities
-        let obstacles = [];
-        let particles = [];
-        let collectibles = [];
+        let platforms = [];
+        let enemies = [];
 
-        // Input
-        let touchX = 0;
-        let targetX = 0;
+        // --- Input Handling (Touch & Mouse) ---
+        const bindBtn = (id, key) => {
+            const el = document.getElementById(id);
+            const start = (e) => { e.preventDefault(); inputs[key] = true; };
+            const end = (e) => { e.preventDefault(); inputs[key] = false; };
+            el.addEventListener('mousedown', start);
+            el.addEventListener('mouseup', end);
+            el.addEventListener('touchstart', start);
+            el.addEventListener('touchend', end);
+            el.addEventListener('mouseleave', end);
+        };
 
-        // Resize handling
+        bindBtn('btn-left', 'left');
+        bindBtn('btn-right', 'right');
+        
+        // Jump trigger
+        const jumpBtn = document.getElementById('btn-jump');
+        jumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); if(player.grounded) player.vy = JUMP_FORCE; });
+        jumpBtn.addEventListener('mousedown', (e) => { e.preventDefault(); if(player.grounded) player.vy = JUMP_FORCE; });
+
+        // Attack trigger
+        const atkBtn = document.getElementById('btn-atk');
+        const doAttack = (e) => {
+            e.preventDefault();
+            if(player.attackCooldown <= 0) {
+                player.isAttacking = true;
+                player.attackCooldown = 20;
+                checkCombat();
+            }
+        };
+        atkBtn.addEventListener('touchstart', doAttack);
+        atkBtn.addEventListener('mousedown', doAttack);
+
+        // Keyboard support for desktop testing
+        window.addEventListener('keydown', e => {
+            if(e.key === 'ArrowLeft') inputs.left = true;
+            if(e.key === 'ArrowRight') inputs.right = true;
+            if(e.key === ' ' && player.grounded) player.vy = JUMP_FORCE;
+            if(e.key === 'z') doAttack(e);
+        });
+        window.addEventListener('keyup', e => {
+            if(e.key === 'ArrowLeft') inputs.left = false;
+            if(e.key === 'ArrowRight') inputs.right = false;
+        });
+
+        // --- Core Functions ---
+
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            player.x = canvas.width / 2;
-            player.y = canvas.height * 0.2; // Player stays at top 20%
-            targetX = canvas.width / 2;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
         }
         window.addEventListener('resize', resize);
         resize();
 
-        // Input Listeners
-        document.addEventListener('touchstart', (e) => {
-            if(!gameActive) return;
-            touchX = e.touches[0].clientX;
-            targetX = touchX;
-            checkDash();
-        });
-        
-        document.addEventListener('touchmove', (e) => {
-            if(!gameActive) return;
-            e.preventDefault();
-            touchX = e.touches[0].clientX;
-            targetX = touchX;
-        });
-
-        // Mouse fallbacks for testing
-        document.addEventListener('mousedown', () => { if(gameActive) checkDash(); });
-        document.addEventListener('mousemove', (e) => {
-            if(!gameActive) return;
-            targetX = e.clientX;
-        });
-
-        function checkDash() {
-            if (player.energy >= 30 && !player.dashing) {
-                player.dashing = true;
-                player.energy -= 30;
-                // Dash visual effect
-                for(let i=0; i<10; i++) {
-                    particles.push(createParticle(player.x, player.y, 'white', 5));
-                }
-                setTimeout(() => { player.dashing = false; }, 400); // 0.4s invincibility
-            }
-        }
-
-        // --- Generators ---
-
-        function createObstacle(y) {
-            const type = Math.random();
-            let obs = {
-                x: Math.random() * canvas.width,
-                y: y,
-                w: 0,
-                h: 0,
-                type: 'rock', // rock, root, mask, spirit
-                speedMod: 1
-            };
-
-            // Layer Logic
-            if (score < 1000) { // Earth Layer
-                obs.type = Math.random() > 0.5 ? 'rock' : 'root';
-                obs.w = 40 + Math.random() * 40;
-                obs.h = 40 + Math.random() * 20;
-            } else if (score < 2500) { // Forgotten Layer
-                obs.type = Math.random() > 0.5 ? 'mask' : 'banner';
-                obs.w = 30 + Math.random() * 30;
-                obs.h = 50 + Math.random() * 30;
-            } else { // Spirit Layer
-                obs.type = 'shadow';
-                obs.w = 50 + Math.random() * 50;
-                obs.h = 50 + Math.random() * 50;
-                obs.speedMod = 1.2; // Shadows move faster
-            }
-            return obs;
-        }
-
-        function createCollectible(y) {
-            return {
-                x: Math.random() * (canvas.width - 40) + 20,
-                y: y,
-                radius: 8,
-                type: Math.random() > 0.7 ? 'dark' : 'light' // 30% dark, 70% light
-            };
-        }
-
-        function createParticle(x, y, color, speedY) {
-            return {
-                x: x,
-                y: y,
-                size: Math.random() * 3,
-                speedY: speedY || (Math.random() * 2 + 1),
-                speedX: (Math.random() - 0.5) * 1,
-                color: color,
-                life: 1.0
-            };
-        }
-
-        // --- Game Logic ---
-
-        function startGame() {
+        function initGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-over-screen').classList.add('hidden');
-            gameActive = true;
+            
+            player.x = width / 2;
+            player.y = 100;
+            player.vx = 0; 
+            player.vy = 0;
+            player.hp = 100;
+            cameraY = 0;
             score = 0;
-            speed = baseSpeed;
-            player.energy = 100;
-            obstacles = [];
-            collectibles = [];
+            
+            platforms = [];
+            enemies = [];
             particles = [];
             
-            // Initial spawn
-            for(let i=0; i<5; i++) {
-                obstacles.push(createObstacle(canvas.height + (i * 300)));
-            }
+            // Initial Platform
+            platforms.push({x: width/2 - 100, y: 200, w: 200, h: 20});
             
+            // Generate world ahead
+            generateWorld(200, 2000);
+            
+            gameRunning = true;
             requestAnimationFrame(gameLoop);
         }
 
-        function resetGame() {
-            startGame();
-        }
+        function generateWorld(startY, endY) {
+            let y = startY;
+            while(y < endY) {
+                y += 100 + Math.random() * 100; // Gap between platforms
+                let w = 100 + Math.random() * 150;
+                let x = Math.random() * (width - w);
+                
+                platforms.push({x, y, w, h: 20});
 
-        function gameOver() {
-            gameActive = false;
-            document.getElementById('final-depth').innerText = `Depth Reached: ${Math.floor(score)}m`;
-            document.getElementById('game-over-screen').classList.remove('hidden');
-        }
-
-        function update(dt) {
-            // Smooth player movement
-            player.x += (targetX - player.x) * 0.15;
-            
-            // Energy Regen
-            if (player.energy < 100) player.energy += 0.2;
-            document.getElementById('dash-bar').style.width = player.energy + '%';
-
-            // Descent Speed Logic (Weight of Soul)
-            score += speed * 0.1;
-            
-            // Layer Management
-            let currentLayer = 0;
-            let layerName = "EARTH LAYER";
-            if (score > 1000) { currentLayer = 1; layerName = "FORGOTTEN LAYER"; }
-            if (score > 2500) { currentLayer = 2; layerName = "SPIRIT LAYER"; }
-            
-            if (currentLayer !== layer) {
-                layer = currentLayer;
-                const toast = document.getElementById('layer-msg');
-                toast.innerText = layerName;
-                toast.style.opacity = 1;
-                setTimeout(() => toast.style.opacity = 0, 3000);
-            }
-
-            // Update Objects (Move UP to simulate falling)
-            
-            // 1. Obstacles
-            if (obstacles.length < 5) {
-                obstacles.push(createObstacle(canvas.height + Math.random() * 200 + 200));
-            }
-
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                let obs = obstacles[i];
-                obs.y -= speed * obs.speedMod;
-
-                // Collision
-                let dx = player.x - (obs.x + obs.w/2);
-                let dy = player.y - (obs.y + obs.h/2);
-                let dist = Math.sqrt(dx*dx + dy*dy);
-
-                if (dist < (player.radius + obs.w/2) && !player.dashing) {
-                    gameOver();
-                }
-
-                if (obs.y < -100) obstacles.splice(i, 1);
-            }
-
-            // 2. Collectibles
-            if (Math.random() < 0.02) collectibles.push(createCollectible(canvas.height + 100));
-
-            for (let i = collectibles.length - 1; i >= 0; i--) {
-                let c = collectibles[i];
-                c.y -= speed;
-
-                // Collision
-                let dx = player.x - c.x;
-                let dy = player.y - c.y;
-                let dist = Math.sqrt(dx*dx + dy*dy);
-
-                if (dist < player.radius + c.radius) {
-                    // Collect!
-                    if (c.type === 'light') {
-                        // Light: Slows down, points
-                        speed = Math.max(3, speed - 0.5);
-                        for(let k=0; k<5; k++) particles.push(createParticle(c.x, c.y, '#ffd700', -2));
-                    } else {
-                        // Dark: Speeds up (Weight)
-                        speed = Math.min(12, speed + 1.0);
-                        for(let k=0; k<5; k++) particles.push(createParticle(c.x, c.y, '#330000', -2));
-                    }
-                    collectibles.splice(i, 1);
-                } else if (c.y < -50) {
-                    collectibles.splice(i, 1);
+                // Add Enemy Chance (30%)
+                if (Math.random() < 0.3) {
+                    enemies.push({
+                        x: x + w/2,
+                        y: y - 30,
+                        w: 30, h: 30,
+                        patrolStart: x,
+                        patrolEnd: x + w,
+                        vx: 1 + Math.random(),
+                        hp: 1
+                    });
                 }
             }
+        }
 
-            // 3. Ambient Particles (Ash)
-            if (particles.length < 50) {
-                particles.push(createParticle(Math.random()*canvas.width, canvas.height + 10, 'rgba(150,150,170,0.3)'));
-            }
+        function checkCombat() {
+            // Create Hitbox in front of player
+            let hitX = player.x + (player.facing * 30);
+            let hitY = player.y;
+            let range = 50;
+
+            // Visual Slash
+            for(let i=0; i<5; i++) createParticle(hitX, hitY, '#fff', 5);
+
+            enemies.forEach((en, i) => {
+                let dx = en.x - player.x;
+                let dy = en.y - player.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                // If enemy is in front and close
+                if (dist < range && Math.sign(dx) === player.facing) {
+                    en.hp--;
+                    // Blood effect
+                    for(let k=0; k<10; k++) createParticle(en.x, en.y, '#ff0000', 3);
+                }
+            });
+        }
+
+        function createParticle(x, y, col, speed) {
+            particles.push({
+                x, y, col,
+                vx: (Math.random() - 0.5) * speed,
+                vy: (Math.random() - 0.5) * speed,
+                life: 1.0
+            });
+        }
+
+        function update() {
+            if (!gameRunning) return;
+
+            // --- Player Physics ---
+            if (inputs.left) { player.vx -= 0.5; player.facing = -1; }
+            if (inputs.right) { player.vx += 0.5; player.facing = 1; }
             
-            particles.forEach((p, index) => {
-                p.y -= speed * 0.5; // Parallax effect
-                p.x += p.speedX;
-                p.life -= 0.01;
-                if(p.life <= 0 || p.y < -10) particles.splice(index, 1);
+            player.vx *= FRICTION;
+            player.vy += GRAVITY;
+            
+            // Max speed cap
+            if(player.vx > MOVE_SPEED) player.vx = MOVE_SPEED;
+            if(player.vx < -MOVE_SPEED) player.vx = -MOVE_SPEED;
+
+            player.x += player.vx;
+            player.y += player.vy;
+
+            // Cooldowns
+            if (player.attackCooldown > 0) player.attackCooldown--;
+            if (player.isAttacking && player.attackCooldown < 15) player.isAttacking = false;
+            if (player.invincible > 0) player.invincible--;
+
+            // --- Collisions ---
+            player.grounded = false;
+            
+            // Platform Collision
+            platforms.forEach(p => {
+                // Check if falling onto platform
+                if (player.vy > 0 && 
+                    player.y + player.h/2 >= p.y && 
+                    player.y + player.h/2 <= p.y + p.h + player.vy && // +player.vy prevents tunneling
+                    player.x >= p.x && 
+                    player.x <= p.x + p.w) {
+                        
+                    player.grounded = true;
+                    player.vy = 0;
+                    player.y = p.y - player.h/2;
+                }
             });
 
-            // UI Updates
-            document.getElementById('depth-display').innerText = Math.floor(score) + "m";
-            const speedText = speed > 7 ? "HEAVY" : (speed < 4 ? "LIGHT" : "NORMAL");
-            document.getElementById('speed-display').innerText = speedText;
-            document.getElementById('speed-display').style.color = speed > 7 ? "#ff4444" : (speed < 4 ? "#44ffff" : "#d4af37");
+            // Enemy Logic
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                let en = enemies[i];
+                
+                // Dead?
+                if (en.hp <= 0) {
+                    enemies.splice(i, 1);
+                    continue;
+                }
+
+                // Patrol
+                en.x += en.vx;
+                if (en.x > en.patrolEnd || en.x < en.patrolStart) en.vx *= -1;
+
+                // Collision with Player
+                let dx = player.x - en.x;
+                let dy = player.y - en.y;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 30 && player.invincible <= 0) {
+                    player.hp -= 20;
+                    player.invincible = 60; // 1 second i-frame
+                    player.vy = -5; // Knockback
+                    player.vx = -Math.sign(dx) * 5;
+                    createParticle(player.x, player.y, '#d4af37', 5);
+                }
+            }
+
+            // Death Check
+            if (player.hp <= 0) {
+                gameRunning = false;
+                document.getElementById('game-over-screen').classList.remove('hidden');
+                document.getElementById('final-score').innerText = `Depth: ${Math.floor(score)}m`;
+            }
+
+            // --- Camera & World Gen ---
+            // Camera follows player vertically, but never goes UP (only descent)
+            // Center the player on screen vertically
+            let targetCamY = player.y - height * 0.4;
+            if (targetCamY > cameraY) {
+                cameraY = targetCamY; // Camera only moves down
+            }
+
+            // Score tracks deepest point
+            if (player.y > score) score = player.y;
+
+            // Generate more world as we fall
+            let deepestPlatform = platforms[platforms.length-1].y;
+            if (deepestPlatform < cameraY + height * 2) {
+                generateWorld(deepestPlatform, deepestPlatform + 1000);
+            }
+
+            // Cleanup old objects
+            if (platforms[0].y < cameraY - 100) platforms.shift();
+            enemies = enemies.filter(e => e.y > cameraY - 100);
+
+            // Particles
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+                if(p.life <= 0) particles.splice(i, 1);
+            });
+
+            // UI Update
+            document.getElementById('score').innerText = `Depth: ${Math.floor(score/10)}m`;
+            document.getElementById('health').innerText = `HP: ${player.hp}`;
+        }
+
+        function drawHuman(ctx, x, y, facing, isAttacking) {
+            ctx.save();
+            ctx.translate(x, y);
+            
+            // Color logic (blink red if hurt)
+            ctx.fillStyle = player.invincible > 0 && Math.floor(Date.now()/50)%2==0 ? "red" : "#000";
+            ctx.strokeStyle = ctx.fillStyle;
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(0, -15, 6, 0, Math.PI*2);
+            ctx.fill();
+
+            // Body
+            ctx.fillRect(-4, -10, 8, 20);
+
+            // Legs (simple animation)
+            if (Math.abs(player.vx) > 0.1 && player.grounded) {
+                let legOffset = Math.sin(Date.now() / 50) * 5;
+                ctx.beginPath();
+                ctx.moveTo(-2, 10); ctx.lineTo(-5 + legOffset, 20);
+                ctx.moveTo(2, 10); ctx.lineTo(5 - legOffset, 20);
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.moveTo(-2, 10); ctx.lineTo(-2, 20);
+                ctx.moveTo(2, 10); ctx.lineTo(2, 20);
+                ctx.stroke();
+            }
+
+            // Sword Arm
+            ctx.save();
+            ctx.translate(0, -5); // Shoulder
+            if (isAttacking) {
+                ctx.rotate(facing * Math.PI / 2); // Swing down
+            } else {
+                ctx.rotate(facing * -Math.PI / 4); // Idle hold
+            }
+            
+            // Arm
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0,0);
+            ctx.lineTo(10 * facing, 0);
+            ctx.stroke();
+
+            // Sword
+            ctx.strokeStyle = "#d4af37"; // Gold sword
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(10 * facing, 0);
+            ctx.lineTo(35 * facing, 0);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.restore();
+        }
+
+        function drawEnemy(ctx, e) {
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            
+            // Smoky effect
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#800080";
+            ctx.fillStyle = "#200020";
+            
+            // Shape
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = "#ff0000";
+            ctx.shadowBlur = 5;
+            ctx.shadowColor = "#ff0000";
+            let lookDir = Math.sign(e.vx);
+            ctx.fillRect(lookDir*5, -5, 4, 4);
+
+            ctx.restore();
         }
 
         function draw() {
-            // Clear Background (Layer Colors)
-            let bgGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            if (layer === 0) { // Earth
-                bgGradient.addColorStop(0, "#050510");
-                bgGradient.addColorStop(1, "#1a1a2e");
-            } else if (layer === 1) { // Forgotten
-                bgGradient.addColorStop(0, "#1a0505");
-                bgGradient.addColorStop(1, "#2e1a1a");
-            } else { // Spirit
-                bgGradient.addColorStop(0, "#000000");
-                bgGradient.addColorStop(1, "#0a0a0a");
-            }
-            ctx.fillStyle = bgGradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Background Clear
+            ctx.fillStyle = "#050510";
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.save();
+            // Apply Camera
+            ctx.translate(0, -cameraY);
+
+            // Draw Platforms
+            ctx.fillStyle = "#1a1a2e";
+            platforms.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                // Gold trim
+                ctx.fillStyle = "#333";
+                ctx.fillRect(p.x, p.y, p.w, 3);
+                ctx.fillStyle = "#1a1a2e";
+            });
+
+            // Draw Enemies
+            enemies.forEach(e => drawEnemy(ctx, e));
+
+            // Draw Player
+            drawHuman(ctx, player.x, player.y, player.facing, player.isAttacking);
 
             // Draw Particles
             particles.forEach(p => {
                 ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
+                ctx.fillStyle = p.col;
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
                 ctx.fill();
             });
             ctx.globalAlpha = 1;
 
-            // Draw Obstacles
-            obstacles.forEach(obs => {
-                ctx.fillStyle = "#000";
-                
-                // Visual Style based on type
-                if (obs.type === 'rock') {
-                    ctx.beginPath();
-                    ctx.moveTo(obs.x, obs.y);
-                    ctx.lineTo(obs.x + obs.w, obs.y + obs.h/2);
-                    ctx.lineTo(obs.x + obs.w/2, obs.y + obs.h);
-                    ctx.lineTo(obs.x, obs.y + obs.h);
-                    ctx.fill();
-                    // Ornament detail
-                    ctx.strokeStyle = "#222";
-                    ctx.stroke();
-                } else if (obs.type === 'root') {
-                    ctx.beginPath();
-                    ctx.moveTo(obs.x + obs.w/2, obs.y);
-                    ctx.bezierCurveTo(obs.x, obs.y + obs.h/2, obs.x + obs.w, obs.y + obs.h/2, obs.x + obs.w/2, obs.y + obs.h);
-                    ctx.lineWidth = 5;
-                    ctx.strokeStyle = "#111";
-                    ctx.stroke();
-                } else if (obs.type === 'shadow') {
-                    ctx.fillStyle = "rgba(0,0,0,0.8)";
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = "#000";
-                    ctx.beginPath();
-                    ctx.arc(obs.x, obs.y, obs.w/2, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.shadowBlur = 0;
-                } else {
-                     // Generic block for others
-                    ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                }
-            });
-
-            // Draw Collectibles
-            collectibles.forEach(c => {
-                ctx.save();
-                ctx.translate(c.x, c.y);
-                ctx.rotate(Date.now() / 200);
-                
-                if (c.type === 'light') {
-                    ctx.fillStyle = "#FFD700";
-                    ctx.shadowBlur = 10;
-                    ctx.shadowColor = "#FFD700";
-                    // Draw diamond (Tamga shape)
-                    ctx.beginPath();
-                    ctx.moveTo(0, -10);
-                    ctx.lineTo(8, 0);
-                    ctx.lineTo(0, 10);
-                    ctx.lineTo(-8, 0);
-                    ctx.fill();
-                } else {
-                    ctx.fillStyle = "#330033";
-                    ctx.strokeStyle = "#550055";
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(0, 0, 8, 0, Math.PI*2);
-                    ctx.fill();
-                    ctx.stroke();
-                }
-                ctx.restore();
-            });
-
-            // Draw Player
-            ctx.save();
-            ctx.shadowBlur = player.dashing ? 20 : 10;
-            ctx.shadowColor = player.dashing ? "#fff" : "#00ffff";
-            ctx.fillStyle = player.dashing ? "#fff" : "#e0f7fa";
-            
-            // Player Trail
-            player.trail.push({x: player.x, y: player.y});
-            if (player.trail.length > 10) player.trail.shift();
-            
-            ctx.beginPath();
-            for(let i=0; i<player.trail.length; i++) {
-                let t = player.trail[i];
-                let scale = i / 10;
-                ctx.globalAlpha = scale * 0.5;
-                ctx.arc(t.x, t.y - (10-i)*2, player.radius * scale, 0, Math.PI*2);
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
-
-            // Main Player Body
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius, 0, Math.PI*2);
-            ctx.fill();
             ctx.restore();
         }
 
-        function gameLoop(timestamp) {
-            if (!gameActive) return;
-            
-            let dt = timestamp - lastTime;
-            lastTime = timestamp;
-
-            update(dt);
+        function gameLoop() {
+            if(!gameRunning) return;
+            update();
             draw();
             requestAnimationFrame(gameLoop);
         }
