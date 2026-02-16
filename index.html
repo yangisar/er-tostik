@@ -366,6 +366,8 @@
             <div style="text-align: right;">
                 <div style="font-size: 7px; color: #fa0;">█ DEPTH █</div>
                 <div id="score-disp" style="font-size: clamp(16px, 4vw, 20px); color:#0ff; text-shadow: 0 0 5px #0ff;">0M</div>
+                <div style="font-size: 7px; color: #f44; margin-top: 5px;">█ KILLS █</div>
+                <div id="kill-score" style="font-size: clamp(14px, 3vw, 16px); color:#f44; text-shadow: 0 0 5px #f00;">0</div>
             </div>
         </div>
         
@@ -377,7 +379,10 @@
             </div>
             <div class="btn-zone">
                 <div class="action-btn" id="btn-atk">⚔</div>
-                <div class="action-btn" id="btn-jump">↑</div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div class="action-btn" id="btn-jump">↑</div>
+                    <div class="action-btn" id="btn-down" style="width: 75px; height: 75px; font-size: 24px; border-color: #fa0; box-shadow: 0 0 25px rgba(255,170,0,0.6);">↓</div>
+                </div>
             </div>
         </div>
     </div>
@@ -1165,6 +1170,8 @@
 
             static draw(ctx, type, x, y, frame, scale = 2) {
                 let sprite;
+                const animFrame = Math.floor(frame / 10) % 2; // Alternate every 10 frames
+                
                 switch(type) {
                     case 'crawler': sprite = this.createCrawler(); break;
                     case 'bat': sprite = this.createBat(); break;
@@ -1177,17 +1184,40 @@
                 ctx.save();
                 ctx.translate(x, y);
                 
-                // Animation effects
+                // Animation effects with limb movement
                 if (type === 'bat') {
-                    // Wing flap
-                    const flapOffset = Math.sin(frame * 0.2) * 2;
+                    // Wing flap - alternate wing positions
+                    const flapOffset = Math.sin(frame * 0.3) * 3;
                     ctx.translate(0, flapOffset);
+                    
+                    // Wing angle variation
+                    if (animFrame === 1) {
+                        ctx.rotate(Math.sin(frame * 0.2) * 0.1);
+                    }
                 } else if (type === 'slime') {
-                    // Blob wobble
-                    ctx.scale(1 + Math.sin(frame * 0.1) * 0.05, 1 + Math.cos(frame * 0.1) * 0.05);
+                    // Blob wobble and squash
+                    const squash = 1 + Math.sin(frame * 0.15) * 0.08;
+                    const stretch = 1 + Math.cos(frame * 0.15) * 0.08;
+                    ctx.scale(squash, stretch);
                 } else if (type === 'sentinel') {
-                    // Rotation
-                    ctx.rotate(frame * 0.02);
+                    // Smooth rotation
+                    ctx.rotate(frame * 0.03);
+                    
+                    // Pulsing scale
+                    const pulse = 1 + Math.sin(frame * 0.1) * 0.05;
+                    ctx.scale(pulse, pulse);
+                } else if (type === 'crawler') {
+                    // Leg movement simulation
+                    if (animFrame === 1) {
+                        ctx.translate(Math.sin(frame * 0.2) * 1, 0);
+                    }
+                } else if (type === 'amalgam') {
+                    // Menacing sway
+                    ctx.rotate(Math.sin(frame * 0.05) * 0.05);
+                    
+                    // Breathing effect
+                    const breathe = 1 + Math.sin(frame * 0.08) * 0.03;
+                    ctx.scale(breathe, breathe);
                 }
                 
                 // Draw pixel by pixel
@@ -1196,12 +1226,20 @@
                         const color = sprite[py][px];
                         if (color) {
                             ctx.fillStyle = color;
+                            
+                            // Add shimmer effect to certain enemy types
+                            if ((type === 'sentinel' || type === 'slime') && Math.random() > 0.95) {
+                                ctx.globalAlpha = 0.7 + Math.random() * 0.3;
+                            }
+                            
                             ctx.fillRect(
                                 (px - sprite[py].length / 2) * scale,
                                 (py - sprite.length / 2) * scale,
                                 scale,
                                 scale
                             );
+                            
+                            ctx.globalAlpha = 1;
                         }
                     }
                 }
@@ -1211,32 +1249,115 @@
         }
 
         // ============================================================================
-        // PLATFORM RENDERING (Static, non-shimmering)
+        // NATURAL PLATFORM RENDERING
         // ============================================================================
 
         function drawPlatform(ctx, p) {
+            const depthFactor = Math.min(1, score / 5000);
+            
             if (p.type === 'stone') {
-                ctx.fillStyle = '#1a1a1a';
+                // Natural stone with cracks and layers
+                const baseColor = depthFactor > 0.5 ? '#2a1a1a' : '#3a3a3a';
+                ctx.fillStyle = baseColor;
                 ctx.fillRect(p.x, p.y, p.w, p.h);
-                ctx.fillStyle = '#2d2d2d';
-                ctx.fillRect(p.x, p.y, p.w, 3);
-                ctx.fillStyle = '#1a4d1a';
-                for (let i = 0; i < p.w; i += 10) {
-                    if (Math.random() > 0.7) ctx.fillRect(p.x + i, p.y, 4, 2);
+                
+                // Stone layers (sedimentary look)
+                for (let layer = 0; layer < 3; layer++) {
+                    const layerY = p.y + (layer * p.h / 3);
+                    ctx.fillStyle = layer % 2 === 0 ? '#4a4a4a' : '#2a2a2a';
+                    ctx.fillRect(p.x, layerY, p.w, p.h / 3);
                 }
+                
+                // Cracks and details
+                ctx.strokeStyle = '#1a1a1a';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 3; i++) {
+                    const crackX = p.x + (i + 1) * p.w / 4;
+                    ctx.beginPath();
+                    ctx.moveTo(crackX, p.y);
+                    ctx.lineTo(crackX + (Math.random() - 0.5) * 10, p.y + p.h);
+                    ctx.stroke();
+                }
+                
+                // Moss patches (only in upper levels)
+                if (depthFactor < 0.4) {
+                    ctx.fillStyle = '#1a4d1a';
+                    for (let i = 0; i < p.w; i += 12) {
+                        if (Math.random() > 0.6) {
+                            ctx.fillRect(p.x + i, p.y, 6, 3);
+                        }
+                    }
+                }
+                
+                // Magma glow edges (deep levels)
+                if (depthFactor > 0.6) {
+                    const magmaGlow = (depthFactor - 0.6) * 2.5;
+                    ctx.fillStyle = `rgba(255, ${Math.floor(80 + magmaGlow * 50)}, 0, ${0.3 * magmaGlow})`;
+                    ctx.fillRect(p.x, p.y, p.w, 2);
+                    ctx.fillRect(p.x, p.y + p.h - 2, p.w, 2);
+                }
+                
+                // Top edge highlight
+                ctx.fillStyle = '#5a5a5a';
+                ctx.fillRect(p.x, p.y, p.w, 2);
+                
             } else if (p.type === 'ice') {
+                // Crystalline ice
                 ctx.fillStyle = '#7ab3d4';
                 ctx.fillRect(p.x, p.y, p.w, p.h);
+                
+                // Ice crystals
                 ctx.fillStyle = '#b3e0ff';
+                for (let i = 0; i < p.w; i += 8) {
+                    for (let j = 0; j < p.h; j += 8) {
+                        if (Math.random() > 0.6) {
+                            ctx.fillRect(p.x + i, p.y + j, 3, 3);
+                        }
+                    }
+                }
+                
+                // Shine layer
+                ctx.fillStyle = '#e6f7ff';
+                ctx.globalAlpha = 0.6;
                 ctx.fillRect(p.x, p.y, p.w, 4);
+                ctx.globalAlpha = 1;
+                
+                // Ice cracks
+                ctx.strokeStyle = '#4d7a99';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 2; i++) {
+                    const crackStart = p.x + Math.random() * p.w;
+                    ctx.beginPath();
+                    ctx.moveTo(crackStart, p.y);
+                    ctx.lineTo(crackStart + (Math.random() - 0.5) * 15, p.y + p.h);
+                    ctx.stroke();
+                }
+                
             } else if (p.type === 'slime') {
+                // Organic slime platform
                 ctx.fillStyle = '#1a7a1a';
                 ctx.fillRect(p.x, p.y, p.w, p.h);
-                ctx.fillStyle = '#29cc29';
-                for (let i = 0; i < p.w; i += 12) {
+                
+                // Slime texture
+                ctx.fillStyle = '#2d9a2d';
+                for (let i = 0; i < p.w; i += 6) {
+                    const blobSize = 4 + Math.random() * 4;
+                    ctx.fillRect(p.x + i, p.y + Math.random() * (p.h - 4), blobSize, blobSize);
+                }
+                
+                // Bubbles on top
+                ctx.fillStyle = '#44cc44';
+                for (let i = 0; i < p.w; i += 14) {
                     ctx.beginPath();
-                    ctx.arc(p.x + i + 6, p.y + 3, 4, 0, Math.PI * 2);
+                    ctx.arc(p.x + i + 7, p.y + 4, 5, 0, Math.PI * 2);
                     ctx.fill();
+                }
+                
+                // Drips
+                ctx.fillStyle = '#2d9a2d';
+                for (let i = 8; i < p.w; i += 18) {
+                    const dripLength = 3 + Math.random() * 4;
+                    ctx.fillRect(p.x + i, p.y + p.h, 3, dripLength);
                 }
             }
         }
@@ -1252,8 +1373,8 @@
         const FALL_DMG_THRESHOLD = 450;
         
         let gameActive = false;
-        let camY = 0, score = 0, frame = 0, shake = 0;
-        let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false, downTime: 0 };
+        let camY = 0, score = 0, killCount = 0, frame = 0, shake = 0;
+        let inputs = { x: 0, y: 0, jump: false, atk: false, down: false, activeStick: false, downTime: 0 };
 
         let player = {
             x: 0, y: 0, w: 20, h: 55,
@@ -1337,6 +1458,7 @@
         
         bindBtn('btn-jump', 'jump');
         bindBtn('btn-atk', 'atk');
+        bindBtn('btn-down', 'down');
 
         // ============================================================================
         // GAME FUNCTIONS
@@ -1372,6 +1494,7 @@
             
             camY = 0; 
             score = 0; 
+            killCount = 0;
             frame = 0;
             
             platforms = []; 
@@ -1435,10 +1558,10 @@
             if(!gameActive) return;
             frame++;
             
-            // DOWN PRESS DETECTION for climb-down
-            if (inputs.y > 0.7 && player.grounded) {
+            // DOWN BUTTON DETECTION for climb-down
+            if (inputs.down && player.grounded) {
                 inputs.downTime += dt;
-                if (inputs.downTime > 2) { // 2 seconds = 120 frames at 60fps
+                if (inputs.downTime > 0.5) { // 0.5 seconds hold
                     // Drop through platform
                     player.y += 10;
                     player.grounded = false;
@@ -1644,6 +1767,8 @@
             // Enemies
             enemies.forEach((e, i) => {
                 if(e.hp <= 0) { 
+                    killCount++; // Increment kill counter
+                    
                     const dropRoll = Math.random();
                     if (dropRoll < 0.6) {
                         const types = ['red', 'blue', 'green', 'orange'];
@@ -1689,6 +1814,8 @@
                 // Stomp
                 if (player.vy > 0 && Math.abs(player.x - e.x) < 25 && 
                     player.y < e.y - 15 && player.y > e.y - 45) {
+                    
+                    killCount++; // Increment kill counter
                     
                     const dropRoll = Math.random();
                     if (dropRoll < 0.6) {
@@ -1784,6 +1911,7 @@
         function updateUI() {
             document.getElementById('hp-bar').style.width = Math.max(0, player.hp) + '%';
             document.getElementById('score-disp').innerText = Math.floor(score/10) + 'M';
+            document.getElementById('kill-score').innerText = killCount;
             
             const weaponText = player.weapon === 'sword' ? 'SWORD' : 'BOW';
             document.getElementById('weapon-text').innerText = weaponText;
@@ -1819,19 +1947,71 @@
         // ============================================================================
 
         function draw() {
-            const depthFactor = Math.min(1, score / 10000);
-            const r = Math.floor(10 + (20*depthFactor));
-            const b = Math.floor(30 - (10*depthFactor));
-            ctx.fillStyle = `rgb(${r},10,${b})`;
+            // PROGRESSIVE BACKGROUND - Earthy → Dark → Magma
+            const depthFactor = Math.min(1, score / 5000);
+            
+            // Sky/background color transition
+            let bgR, bgG, bgB;
+            if (depthFactor < 0.33) {
+                // Phase 1: Earthy tones (brown/tan)
+                const t = depthFactor / 0.33;
+                bgR = Math.floor(101 - t * 51); // 101 → 50
+                bgG = Math.floor(67 - t * 37); // 67 → 30
+                bgB = Math.floor(33 - t * 13); // 33 → 20
+            } else if (depthFactor < 0.66) {
+                // Phase 2: Darkness (dark grey/black)
+                const t = (depthFactor - 0.33) / 0.33;
+                bgR = Math.floor(50 - t * 40); // 50 → 10
+                bgG = Math.floor(30 - t * 20); // 30 → 10
+                bgB = Math.floor(20 - t * 10); // 20 → 10
+            } else {
+                // Phase 3: Magma glow (dark red)
+                const t = (depthFactor - 0.66) / 0.34;
+                bgR = Math.floor(10 + t * 50); // 10 → 60
+                bgG = Math.floor(10); // Stay dark
+                bgB = Math.floor(10); // Stay dark
+            }
+            
+            ctx.fillStyle = `rgb(${bgR},${bgG},${bgB})`;
             ctx.fillRect(0, 0, W, H);
+            
+            // MAGMA CRACKS (appear in deep zones)
+            if (depthFactor > 0.5) {
+                const magmaIntensity = (depthFactor - 0.5) * 2;
+                
+                // Vertical magma veins
+                ctx.strokeStyle = `rgba(255, ${Math.floor(100 + magmaIntensity * 50)}, 0, ${0.3 + magmaIntensity * 0.4})`;
+                ctx.lineWidth = 2 + magmaIntensity * 3;
+                
+                for (let i = 0; i < 8; i++) {
+                    const veinX = (i * W / 8) + Math.sin((camY + i * 200) * 0.005) * 50;
+                    ctx.beginPath();
+                    ctx.moveTo(veinX, 0);
+                    
+                    for (let y = 0; y < H; y += 20) {
+                        const offsetX = Math.sin((camY + y) * 0.01) * 10;
+                        ctx.lineTo(veinX + offsetX, y);
+                    }
+                    ctx.stroke();
+                    
+                    // Glow effect
+                    ctx.shadowBlur = 15 * magmaIntensity;
+                    ctx.shadowColor = `rgba(255, 80, 0, ${magmaIntensity * 0.8})`;
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            }
 
-            // Stars
-            ctx.fillStyle = "rgba(255,255,255,0.8)";
-            bgStars.forEach(s => {
-                let sy = (s.y - camY * s.speed) % H; 
-                if(sy < 0) sy += H;
-                ctx.fillRect(s.x, sy, s.s, s.s);
-            });
+            // Animated stars (fade out in deep zones)
+            if (depthFactor < 0.7) {
+                const starAlpha = (1 - depthFactor / 0.7) * 0.8;
+                ctx.fillStyle = `rgba(255, 255, 255, ${starAlpha})`;
+                bgStars.forEach(s => {
+                    let sy = (s.y - camY * s.speed) % H; 
+                    if(sy < 0) sy += H;
+                    ctx.fillRect(s.x, sy, s.s, s.s);
+                });
+            }
 
             ctx.save();
             ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake - camY);
