@@ -1452,10 +1452,10 @@
                 
                 // Special handling for down button - trigger climb down immediately
                 if (key === 'down' && player.grounded) {
-                    player.y += 10;
+                    player.y += 30; // Move down past the platform height (25px)
                     player.grounded = false;
-                    player.vy = 2;
-                    showToast("CLIMB DOWN!", "#fa0");
+                    player.vy = 5; // Give downward velocity
+                    showToast("DESCEND", "#fa0");
                 }
             });
             el.addEventListener('touchend', e => { 
@@ -1770,7 +1770,8 @@
                             x: e.x, 
                             y: e.y - 20, 
                             type: types[Math.floor(Math.random()*types.length)],
-                            vy: -3
+                            vy: -3,
+                            grounded: false
                         });
                     }
                     
@@ -1818,7 +1819,8 @@
                             x: e.x, 
                             y: e.y - 20, 
                             type: types[Math.floor(Math.random()*types.length)],
-                            vy: -3
+                            vy: -3,
+                            grounded: false
                         });
                     }
                     
@@ -1854,11 +1856,27 @@
                 }
             });
 
-            // Items
+            // Items - Physics and Collision
             items.forEach((it, i) => {
-                it.vy += GRAVITY * 0.3;
-                it.y += it.vy;
+                // Apply Gravity if not grounded
+                if (!it.grounded) {
+                    it.vy += GRAVITY * 0.3;
+                    it.y += it.vy;
+                }
                 
+                // Platform Collision for Items
+                if (it.vy >= 0 && !it.grounded) {
+                    platforms.forEach(p => {
+                        if (it.x > p.x && it.x < p.x + p.w &&
+                            it.y >= p.y - 10 && it.y <= p.y + 10) {
+                            it.y = p.y - 6; // Sit on top
+                            it.vy = 0;
+                            it.grounded = true;
+                        }
+                    });
+                }
+
+                // Player Pickup
                 if(Math.hypot(player.x - it.x, player.y - it.y) < 30) {
                     items.splice(i, 1); 
                     applyItem(it.type);
