@@ -3,11 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Er Tostik: Descent to the Underworld</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
 
         body {
             margin: 0;
@@ -16,31 +24,57 @@
             touch-action: none;
             user-select: none;
             font-family: 'Press Start 2P', monospace;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
 
-        canvas { display: block; width: 100%; height: 100vh; image-rendering: pixelated; }
+        canvas { 
+            display: block; 
+            width: 100vw; 
+            height: 100vh;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
 
         #ui-layer {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
             pointer-events: none;
-            display: flex; flex-direction: column; justify-content: space-between;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between;
+            z-index: 10;
         }
 
         /* HUD */
         .hud-panel {
-            padding: 15px;
+            padding: 10px 15px;
             background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
             color: #00ff00;
             text-shadow: 0 0 4px #00ff00;
-            display: flex; justify-content: space-between; align-items: flex-start;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: flex-start;
             font-size: 8px;
         }
 
         .bar-wrap {
-            width: 140px; height: 12px; background: #000; border: 2px solid #00ff00;
-            margin-bottom: 5px; position: relative; overflow: hidden;
-            image-rendering: pixelated;
+            width: 120px; 
+            height: 10px; 
+            background: #000; 
+            border: 2px solid #00ff00;
+            margin-bottom: 5px; 
+            position: relative; 
+            overflow: hidden;
         }
+        
         .hp-fill { 
             height: 100%; 
             background: repeating-linear-gradient(
@@ -50,79 +84,137 @@
                 #cc0000 2px,
                 #cc0000 4px
             );
-            width: 100%; transition: width 0.1s; 
+            width: 100%; 
+            transition: width 0.15s; 
         }
 
         .weapon-display {
-            display: flex; gap: 8px; margin-top: 5px; align-items: center;
-            font-size: 8px; color: #0ff;
+            display: flex; 
+            gap: 6px; 
+            margin-top: 4px; 
+            align-items: center;
+            font-size: 7px; 
+            color: #0ff;
         }
 
         /* Controls */
         .controls-area {
-            height: 250px; width: 100%;
-            display: flex; justify-content: space-between;
-            padding: 20px; box-sizing: border-box;
+            height: 220px; 
+            width: 100%;
+            display: flex; 
+            justify-content: space-between;
+            padding: 15px; 
+            box-sizing: border-box;
             pointer-events: auto;
-            padding-bottom: 40px;
+            padding-bottom: 30px;
         }
 
-        .stick-zone { width: 45%; height: 100%; position: relative; }
-        .stick-base {
-            position: absolute; width: 90px; height: 90px;
-            border: 3px solid rgba(0,255,255,0.3);
-            background: rgba(0,0,0,0.6);
-            border-radius: 50%; display: none; pointer-events: none;
-            box-shadow: 0 0 20px rgba(0,255,255,0.5);
+        .stick-zone { 
+            width: 45%; 
+            height: 100%; 
+            position: relative; 
         }
-        .stick-knob {
-            position: absolute; width: 40px; height: 40px;
-            background: radial-gradient(circle, #0ff, #0aa);
-            border: 2px solid #0ff;
-            border-radius: 50%; top: 25px; left: 25px;
+        
+        .stick-base {
+            position: absolute; 
+            width: 100px; 
+            height: 100px;
+            border: 3px solid rgba(0,255,255,0.4);
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%; 
+            display: none; 
             pointer-events: none;
-            box-shadow: 0 0 15px #0ff;
+            box-shadow: 0 0 25px rgba(0,255,255,0.6);
+        }
+        
+        .stick-knob {
+            position: absolute; 
+            width: 45px; 
+            height: 45px;
+            background: radial-gradient(circle, #0ff, #0aa);
+            border: 3px solid #0ff;
+            border-radius: 50%; 
+            top: 27.5px; 
+            left: 27.5px;
+            pointer-events: none;
+            box-shadow: 0 0 20px #0ff;
         }
 
         .btn-zone {
-            width: 50%; height: 100%;
-            display: flex; justify-content: flex-end; align-items: flex-end;
-            gap: 15px;
+            width: 50%; 
+            height: 100%;
+            display: flex; 
+            justify-content: flex-end; 
+            align-items: flex-end;
+            gap: 12px;
         }
-        .action-btn {
-            width: 85px; height: 85px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.7);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            color: #fff; font-size: 28px;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 0 20px rgba(0,255,255,0.3);
-            font-family: 'Press Start 2P';
-        }
-        .action-btn:active { transform: scale(0.9); box-shadow: 0 0 30px rgba(0,255,255,0.8); }
         
-        #btn-atk { border-color: #f00; box-shadow: 0 0 20px rgba(255,0,0,0.5); margin-bottom: 30px; }
-        #btn-jump { border-color: #0f0; box-shadow: 0 0 20px rgba(0,255,0,0.5); width: 70px; height: 70px; font-size: 20px; }
+        .action-btn {
+            width: 90px; 
+            height: 90px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            color: #fff; 
+            font-size: 32px;
+            display: flex; 
+            justify-content: center; 
+            align-items: center;
+            box-shadow: 0 0 25px rgba(0,255,255,0.4);
+            font-family: 'Press Start 2P';
+            transition: transform 0.1s;
+        }
+        
+        .action-btn:active { 
+            transform: scale(0.88); 
+            box-shadow: 0 0 35px rgba(0,255,255,0.9); 
+        }
+        
+        #btn-atk { 
+            border-color: #f00; 
+            box-shadow: 0 0 25px rgba(255,0,0,0.6); 
+            margin-bottom: 25px; 
+        }
+        
+        #btn-jump { 
+            border-color: #0f0; 
+            box-shadow: 0 0 25px rgba(0,255,0,0.6); 
+            width: 75px; 
+            height: 75px; 
+            font-size: 24px; 
+        }
 
         /* Title Screen */
         .title-screen {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
             background: #000;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 30; color: #0ff;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            z-index: 30; 
+            color: #0ff;
             pointer-events: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .title-logo {
-            font-size: 48px;
+            font-size: clamp(32px, 8vw, 48px);
             color: #0ff;
             text-shadow: 
                 0 0 10px #0ff,
                 0 0 20px #0ff,
                 4px 4px 0px #f00,
                 8px 8px 0px #000;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             animation: glow 2s ease-in-out infinite;
+            text-align: center;
+            padding: 0 10px;
         }
 
         @keyframes glow {
@@ -131,44 +223,52 @@
         }
 
         .chapter-text {
-            font-size: 12px;
+            font-size: clamp(8px, 2vw, 12px);
             color: #fa0;
-            letter-spacing: 3px;
-            margin-bottom: 30px;
+            letter-spacing: 2px;
+            margin-bottom: 20px;
             text-shadow: 0 0 5px #fa0;
+            text-align: center;
+            padding: 0 10px;
         }
 
         .story-box {
-            max-width: 600px;
-            padding: 20px;
+            max-width: min(90%, 600px);
+            padding: 15px;
             background: rgba(0,0,0,0.8);
             border: 3px solid #0ff;
             box-shadow: 0 0 30px rgba(0,255,255,0.5);
-            margin: 20px;
-            font-size: 10px;
-            line-height: 1.8;
+            margin: 15px;
+            font-size: clamp(7px, 1.8vw, 10px);
+            line-height: 1.6;
             color: #fff;
+            max-height: 40vh;
+            overflow-y: auto;
         }
 
         .lang-section {
-            margin-bottom: 15px;
+            margin-bottom: 12px;
         }
 
         .lang-label {
             color: #0ff;
-            font-size: 11px;
-            margin-bottom: 8px;
+            font-size: clamp(8px, 2vw, 11px);
+            margin-bottom: 6px;
         }
 
         .start-btn {
-            margin-top: 30px; padding: 15px 40px;
-            font-size: 14px; font-family: 'Press Start 2P';
-            background: #000; color: #0ff;
+            margin-top: 20px; 
+            padding: 12px 35px;
+            font-size: clamp(10px, 2.5vw, 14px);
+            font-family: 'Press Start 2P';
+            background: #000; 
+            color: #0ff;
             border: 3px solid #0ff;
             cursor: pointer;
             text-transform: uppercase;
             box-shadow: 0 0 20px rgba(0,255,255,0.5);
             animation: blink 1s infinite;
+            touch-action: manipulation;
         }
 
         @keyframes blink {
@@ -176,40 +276,59 @@
             51%, 100% { opacity: 0.6; }
         }
 
-        .start-btn:hover {
+        .start-btn:active {
             background: #0ff;
             color: #000;
             box-shadow: 0 0 40px rgba(0,255,255,1);
+            transform: scale(0.95);
         }
 
         .hidden { display: none !important; }
 
         .game-over {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%;
             background: rgba(0,0,0,0.95);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            z-index: 25; color: #f00;
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            z-index: 25; 
+            color: #f00;
             pointer-events: auto;
         }
 
         .game-over h1 {
-            font-size: 42px;
+            font-size: clamp(28px, 6vw, 42px);
             text-shadow: 0 0 20px #f00;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
 
         .toast {
-            position: absolute; top: 30%; width: 100%; text-align: center;
-            font-size: 16px; font-weight: bold; color: #fff; 
+            position: absolute; 
+            top: 30%; 
+            width: 100%; 
+            text-align: center;
+            font-size: clamp(12px, 3vw, 16px);
+            font-weight: bold; 
+            color: #fff; 
             text-shadow: 0 0 10px #0ff;
-            opacity: 0; pointer-events: none; transition: opacity 0.5s;
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 0.5s;
             font-family: 'Press Start 2P';
+            z-index: 15;
         }
 
         .scanlines {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            top: 0; 
+            left: 0;
+            width: 100%; 
+            height: 100%;
             background: repeating-linear-gradient(
                 0deg,
                 rgba(0, 0, 0, 0.1) 0px,
@@ -219,6 +338,13 @@
             );
             pointer-events: none;
             z-index: 50;
+        }
+
+        .copyright {
+            font-size: clamp(6px, 1.5vw, 8px);
+            color: #666;
+            margin-top: 15px;
+            text-align: center;
         }
     </style>
 </head>
@@ -239,7 +365,7 @@
             </div>
             <div style="text-align: right;">
                 <div style="font-size: 7px; color: #fa0;">█ DEPTH █</div>
-                <div id="score-disp" style="font-size: 20px; color:#0ff; text-shadow: 0 0 5px #0ff;">0M</div>
+                <div id="score-disp" style="font-size: clamp(16px, 4vw, 20px); color:#0ff; text-shadow: 0 0 5px #0ff;">0M</div>
             </div>
         </div>
         
@@ -272,318 +398,326 @@
             </div>
         </div>
 
-        <button class="start-btn" onclick="startGame()">▶ INSERT COIN ◀</button>
-        <div style="font-size: 8px; color: #666; margin-top: 20px;">© 2025 ARCADE CLASSICS</div>
+        <button class="start-btn" onclick="startGame()">▶ START ◀</button>
+        <div class="copyright">© 2025 ARCADE CLASSICS</div>
     </div>
 
     <div id="game-over" class="game-over hidden">
         <h1>GAME OVER</h1>
-        <p id="final-depth" style="font-size: 24px; color: #0ff; margin: 15px 0;">DEPTH: 0M</p>
+        <p id="final-depth" style="font-size: clamp(18px, 4vw, 24px); color: #0ff; margin: 12px 0;">DEPTH: 0M</p>
         <button class="start-btn" onclick="startGame()">▶ CONTINUE? ◀</button>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d', { alpha: false });
+        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
         // ============================================================================
-        // PIXEL ART SPRITES - All hand-crafted pixel by pixel
+        // MOBILE OPTIMIZATION
         // ============================================================================
 
-        const SPRITE_SCALE = 2;
+        let dpr = Math.min(window.devicePixelRatio || 1, 2); // Limit to 2x for performance
+        let W, H, displayW, displayH;
 
-        // Color Palettes
-        const COLORS = {
+        function resize() {
+            displayW = window.innerWidth;
+            displayH = window.innerHeight;
+            
+            // Use lower resolution for better performance on mobile
+            W = Math.floor(displayW * dpr);
+            H = Math.floor(displayH * dpr);
+            
+            canvas.width = W;
+            canvas.height = H;
+            canvas.style.width = displayW + 'px';
+            canvas.style.height = displayH + 'px';
+            
+            ctx.imageSmoothingEnabled = false;
+            
+            generateStars();
+        }
+
+        function generateStars() {
+            bgStars = [];
+            for(let i=0; i<60; i++) {
+                bgStars.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    s: Math.random() * 2 + 1,
+                    speed: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+
+        window.addEventListener('resize', resize);
+        window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+        resize();
+
+        // ============================================================================
+        // COLOR PALETTES
+        // ============================================================================
+
+        const C = {
             // Warrior
             HELMET_DARK: '#2d3561', HELMET_MID: '#4a5a8a', HELMET_LIGHT: '#6b7db5', HELMET_SHINE: '#9fb3ff',
             GOLD: '#ffd700', GOLD_DARK: '#b8860b',
-            ARMOR_DARK: '#1a4d5c', ARMOR_MID: '#2d7a8f', ARMOR_LIGHT: '#45a8c5', ARMOR_SHINE: '#7fd8f0',
+            ARMOR_DARK: '#1a4d5c', ARMOR_MID: '#2d7a8f', ARMOR_LIGHT: '#45a8c5',
             TUNIC_DARK: '#8b0000', TUNIC_MID: '#c41e3a', TUNIC_LIGHT: '#e63946',
             SCARF_DARK: '#00a8a8', SCARF_MID: '#00d4d4', SCARF_LIGHT: '#00ffff', SCARF_GLOW: '#b0ffff',
-            BELT_LEATHER: '#8b4513', BELT_BUCKLE: '#ffd700',
+            BELT: '#8b4513', BELT_GOLD: '#ffd700',
             BOOT_DARK: '#3d2817', BOOT_MID: '#5c4033', BOOT_LIGHT: '#7d5a3d',
             SKIN_DARK: '#8d6e63', SKIN_MID: '#a1887f', SKIN_LIGHT: '#bcaaa4',
             BLADE_DARK: '#b0c4de', BLADE_MID: '#d3e5f5', BLADE_LIGHT: '#f0f8ff',
             HILT_GOLD: '#daa520', HILT_JEWEL: '#ff0000',
-            
-            // Enemies
-            DEMON_DARK: '#4a0e0e', DEMON_MID: '#8b1a1a', DEMON_LIGHT: '#cc2929', DEMON_EYE: '#ff0000',
-            BONE_DARK: '#8b7355', BONE_MID: '#d4a574', BONE_LIGHT: '#f4e4c1',
-            VOID_DARK: '#1a0033', VOID_MID: '#4d0099', VOID_LIGHT: '#8800ff', VOID_GLOW: '#ff00ff',
-            SLIME_DARK: '#0d4d0d', SLIME_MID: '#1a7a1a', SLIME_LIGHT: '#29cc29',
-            BAT_DARK: '#2d1a4d', BAT_MID: '#5c3399', BAT_LIGHT: '#8a4dcc', BAT_EYE: '#ff0066',
-            
-            // Platforms
-            STONE_DARK: '#1a1a1a', STONE_MID: '#2d2d2d', STONE_LIGHT: '#4d4d4d', STONE_MOSS: '#1a4d1a',
-            ICE_DARK: '#4d7a99', ICE_MID: '#7ab3d4', ICE_LIGHT: '#b3e0ff', ICE_SHINE: '#ffffff',
         };
 
         // ============================================================================
-        // WARRIOR SPRITE SYSTEM with LEG ANIMATION
+        // WARRIOR SPRITE with REFINED ANIMATIONS
         // ============================================================================
+
+        const SPRITE_SCALE = 2;
 
         class WarriorSprite {
             constructor() {
                 this.sprites = {};
-                this.initializeAllSprites();
+                this.cache = {};
+                this.init();
             }
 
-            createEmptySprite() {
+            empty() {
                 const s = [];
                 for (let y = 0; y < 32; y++) s[y] = new Array(32).fill(null);
                 return s;
             }
 
-            createIdleFrame1() {
-                const s = this.createEmptySprite();
+            // Base standing sprite
+            base() {
+                const s = this.empty();
                 
                 // Plume
-                s[3][15] = COLORS.SCARF_LIGHT; s[3][16] = COLORS.SCARF_MID;
-                s[4][14] = COLORS.SCARF_MID; s[4][15] = COLORS.SCARF_LIGHT; s[4][16] = COLORS.SCARF_MID; s[4][17] = COLORS.SCARF_DARK;
-                s[5][15] = COLORS.SCARF_MID; s[5][16] = COLORS.SCARF_DARK;
+                s[3][15] = C.SCARF_LIGHT; s[3][16] = C.SCARF_MID;
+                s[4][14] = C.SCARF_MID; s[4][15] = C.SCARF_LIGHT; s[4][16] = C.SCARF_MID; s[4][17] = C.SCARF_DARK;
                 
                 // Helmet
-                s[6][15] = COLORS.HELMET_SHINE; s[6][16] = COLORS.HELMET_LIGHT;
-                s[7][14] = COLORS.HELMET_LIGHT; s[7][15] = COLORS.HELMET_SHINE; s[7][16] = COLORS.HELMET_MID; s[7][17] = COLORS.HELMET_DARK;
-                for (let x = 13; x <= 18; x++) s[8][x] = x <= 15 ? COLORS.HELMET_LIGHT : COLORS.HELMET_MID;
-                for (let x = 12; x <= 19; x++) s[9][x] = x <= 14 ? COLORS.HELMET_LIGHT : x <= 16 ? COLORS.HELMET_MID : COLORS.HELMET_DARK;
-                
-                // Gold rim
-                for (let x = 12; x <= 19; x++) s[10][x] = COLORS.GOLD;
-                s[10][15] = COLORS.GOLD_DARK; s[10][16] = COLORS.GOLD_DARK;
+                s[6][15] = C.HELMET_SHINE; s[6][16] = C.HELMET_LIGHT;
+                s[7][14] = C.HELMET_LIGHT; s[7][15] = C.HELMET_SHINE; s[7][16] = C.HELMET_MID; s[7][17] = C.HELMET_DARK;
+                for (let x = 13; x <= 18; x++) s[8][x] = x <= 15 ? C.HELMET_LIGHT : C.HELMET_MID;
+                for (let x = 12; x <= 19; x++) s[9][x] = x <= 14 ? C.HELMET_LIGHT : x <= 16 ? C.HELMET_MID : C.HELMET_DARK;
+                for (let x = 12; x <= 19; x++) s[10][x] = C.GOLD;
                 
                 // Face
-                s[11][13] = COLORS.HELMET_MID; s[11][14] = COLORS.SKIN_DARK; s[11][15] = COLORS.SKIN_MID; s[11][16] = COLORS.SKIN_MID; s[11][17] = COLORS.SKIN_DARK; s[11][18] = COLORS.HELMET_MID;
-                s[12][13] = COLORS.HELMET_DARK; s[12][14] = COLORS.SKIN_MID; s[12][15] = COLORS.HELMET_DARK; s[12][16] = COLORS.HELMET_DARK; s[12][17] = COLORS.SKIN_MID; s[12][18] = COLORS.HELMET_DARK;
+                s[11][13] = C.HELMET_MID; s[11][14] = C.SKIN_DARK; s[11][15] = C.SKIN_MID; s[11][16] = C.SKIN_MID; s[11][17] = C.SKIN_DARK; s[11][18] = C.HELMET_MID;
+                s[12][13] = C.HELMET_DARK; s[12][14] = C.SKIN_MID; s[12][15] = C.HELMET_DARK; s[12][16] = C.HELMET_DARK; s[12][17] = C.SKIN_MID; s[12][18] = C.HELMET_DARK;
                 
                 // Scarf flow
-                s[11][10] = COLORS.SCARF_DARK; s[11][11] = COLORS.SCARF_MID;
-                s[12][9] = COLORS.SCARF_DARK; s[12][10] = COLORS.SCARF_LIGHT; s[12][11] = COLORS.SCARF_MID;
-                s[13][8] = COLORS.SCARF_MID; s[13][9] = COLORS.SCARF_LIGHT; s[13][10] = COLORS.SCARF_GLOW;
-                s[14][8] = COLORS.SCARF_DARK; s[14][9] = COLORS.SCARF_MID; s[15][8] = COLORS.SCARF_DARK;
-                s[11][20] = COLORS.SCARF_MID; s[11][21] = COLORS.SCARF_DARK;
-                s[12][20] = COLORS.SCARF_MID; s[12][21] = COLORS.SCARF_LIGHT; s[12][22] = COLORS.SCARF_DARK;
-                s[13][21] = COLORS.SCARF_LIGHT; s[13][22] = COLORS.SCARF_GLOW; s[13][23] = COLORS.SCARF_MID;
-                s[14][22] = COLORS.SCARF_MID; s[14][23] = COLORS.SCARF_DARK; s[15][23] = COLORS.SCARF_DARK;
+                s[11][10] = C.SCARF_DARK; s[11][11] = C.SCARF_MID;
+                s[12][9] = C.SCARF_DARK; s[12][10] = C.SCARF_LIGHT; s[12][11] = C.SCARF_MID;
+                s[13][8] = C.SCARF_MID; s[13][9] = C.SCARF_LIGHT; s[13][10] = C.SCARF_GLOW;
+                s[11][20] = C.SCARF_MID; s[11][21] = C.SCARF_DARK;
+                s[12][20] = C.SCARF_MID; s[12][21] = C.SCARF_LIGHT; s[12][22] = C.SCARF_DARK;
+                s[13][21] = C.SCARF_LIGHT; s[13][22] = C.SCARF_GLOW; s[13][23] = C.SCARF_MID;
                 
                 // Shoulders
-                s[13][12] = COLORS.ARMOR_DARK; s[13][13] = COLORS.ARMOR_MID;
-                s[14][11] = COLORS.ARMOR_DARK; s[14][12] = COLORS.ARMOR_LIGHT; s[14][13] = COLORS.ARMOR_MID;
-                s[15][11] = COLORS.ARMOR_MID; s[15][12] = COLORS.ARMOR_LIGHT;
-                s[13][18] = COLORS.ARMOR_MID; s[13][19] = COLORS.ARMOR_DARK;
-                s[14][18] = COLORS.ARMOR_MID; s[14][19] = COLORS.ARMOR_LIGHT; s[14][20] = COLORS.ARMOR_DARK;
-                s[15][19] = COLORS.ARMOR_LIGHT; s[15][20] = COLORS.ARMOR_MID;
+                s[13][12] = C.ARMOR_DARK; s[13][13] = C.ARMOR_MID;
+                s[14][11] = C.ARMOR_DARK; s[14][12] = C.ARMOR_LIGHT; s[14][13] = C.ARMOR_MID;
+                s[13][18] = C.ARMOR_MID; s[13][19] = C.ARMOR_DARK;
+                s[14][18] = C.ARMOR_MID; s[14][19] = C.ARMOR_LIGHT; s[14][20] = C.ARMOR_DARK;
                 
                 // Chest
                 for (let y = 13; y <= 18; y++) {
                     for (let x = 14; x <= 17; x++) {
-                        s[y][x] = (y === 13 || y === 15 || y === 17) ? 
-                            ((x % 2 === 0) ? COLORS.ARMOR_LIGHT : COLORS.ARMOR_MID) :
-                            ((x % 2 === 0) ? COLORS.ARMOR_MID : COLORS.ARMOR_DARK);
+                        s[y][x] = (y % 2 === 0) ? ((x % 2 === 0) ? C.ARMOR_LIGHT : C.ARMOR_MID) : C.ARMOR_DARK;
                     }
                 }
-                s[15][15] = COLORS.GOLD; s[15][16] = COLORS.GOLD;
-                s[16][15] = COLORS.GOLD_DARK; s[16][16] = COLORS.GOLD_DARK;
+                s[15][15] = C.GOLD; s[15][16] = C.GOLD;
                 
                 // Belt
-                for (let x = 13; x <= 18; x++) s[19][x] = COLORS.BELT_LEATHER;
-                s[19][15] = COLORS.BELT_BUCKLE; s[19][16] = COLORS.BELT_BUCKLE;
-                s[20][15] = COLORS.GOLD_DARK; s[20][16] = COLORS.GOLD_DARK;
+                for (let x = 13; x <= 18; x++) s[19][x] = C.BELT;
+                s[19][15] = C.BELT_GOLD; s[19][16] = C.BELT_GOLD;
                 
-                // Tunic edges
-                for (let y = 17; y <= 18; y++) { s[y][13] = COLORS.TUNIC_DARK; s[y][18] = COLORS.TUNIC_DARK; }
+                // Tunic
+                s[17][13] = C.TUNIC_DARK; s[17][18] = C.TUNIC_DARK;
+                s[18][13] = C.TUNIC_DARK; s[18][18] = C.TUNIC_DARK;
                 
-                // Legs (STANDING - both legs together)
+                // LEGS (standing neutral)
                 for (let y = 20; y <= 25; y++) {
-                    s[y][13] = y <= 22 ? COLORS.ARMOR_MID : COLORS.TUNIC_MID;
-                    s[y][14] = y <= 22 ? COLORS.ARMOR_LIGHT : COLORS.TUNIC_LIGHT;
-                    s[y][17] = y <= 22 ? COLORS.ARMOR_LIGHT : COLORS.TUNIC_LIGHT;
-                    s[y][18] = y <= 22 ? COLORS.ARMOR_MID : COLORS.TUNIC_MID;
+                    s[y][14] = y <= 22 ? C.ARMOR_LIGHT : C.TUNIC_LIGHT;
+                    s[y][15] = y <= 22 ? C.ARMOR_MID : C.TUNIC_MID;
+                    s[y][16] = y <= 22 ? C.ARMOR_MID : C.TUNIC_MID;
+                    s[y][17] = y <= 22 ? C.ARMOR_LIGHT : C.TUNIC_LIGHT;
                 }
                 
-                // Boots
+                // BOOTS
                 for (let y = 26; y <= 29; y++) {
-                    s[y][13] = COLORS.BOOT_DARK; s[y][14] = COLORS.BOOT_MID; s[y][15] = y === 29 ? COLORS.BOOT_MID : COLORS.BOOT_LIGHT;
-                    s[y][16] = y === 29 ? COLORS.BOOT_MID : COLORS.BOOT_LIGHT; s[y][17] = COLORS.BOOT_MID; s[y][18] = COLORS.BOOT_DARK;
+                    s[y][14] = C.BOOT_DARK; s[y][15] = C.BOOT_MID;
+                    s[y][16] = C.BOOT_MID; s[y][17] = C.BOOT_DARK;
                 }
+                s[29][15] = C.BOOT_LIGHT; s[29][16] = C.BOOT_LIGHT;
                 
                 // Sword sheathed
-                s[16][19] = COLORS.HILT_GOLD; s[17][19] = COLORS.HILT_GOLD; s[17][20] = COLORS.HILT_JEWEL; s[18][19] = COLORS.HILT_GOLD;
-                for (let y = 19; y <= 24; y++) {
-                    s[y][19] = COLORS.BLADE_DARK;
-                    if (y >= 20) s[y][20] = COLORS.BLADE_MID;
-                }
-                s[23][20] = COLORS.BLADE_LIGHT;
+                s[16][19] = C.HILT_GOLD; s[17][19] = C.HILT_GOLD;
+                for (let y = 19; y <= 24; y++) s[y][19] = C.BLADE_DARK;
                 
                 // Left arm
-                s[16][11] = COLORS.ARMOR_MID; s[16][12] = COLORS.ARMOR_LIGHT;
-                s[17][11] = COLORS.TUNIC_MID; s[17][12] = COLORS.ARMOR_MID;
-                s[18][11] = COLORS.TUNIC_MID; s[18][12] = COLORS.TUNIC_LIGHT;
-                s[19][11] = COLORS.SKIN_MID; s[19][12] = COLORS.SKIN_LIGHT;
-                s[20][11] = COLORS.SKIN_DARK; s[20][12] = COLORS.SKIN_MID;
-                s[21][11] = COLORS.BOOT_DARK; s[21][12] = COLORS.BOOT_MID;
+                s[16][11] = C.ARMOR_MID; s[17][11] = C.TUNIC_MID; s[18][11] = C.SKIN_MID;
+                s[19][11] = C.SKIN_DARK; s[20][11] = C.BOOT_DARK;
                 
                 return s;
             }
 
-            createRunFrame1() {
-                const s = this.createIdleFrame1();
+            // Walking frame 1 - LEFT LEG FORWARD
+            walk1() {
+                const s = this.base();
                 
-                // LEFT LEG FORWARD (shift left leg forward)
+                // Left leg forward and extended
                 for (let y = 20; y <= 29; y++) {
-                    s[y-1][12] = s[y][13];
-                    s[y-1][13] = s[y][14];
-                    s[y][13] = null;
-                    s[y][14] = null;
+                    const shift = Math.floor((29 - y) / 3);
+                    if (s[y][14]) s[y - 2][13 - shift] = s[y][14];
+                    if (s[y][15]) s[y - 2][14 - shift] = s[y][15];
+                    s[y][14] = null; s[y][15] = null;
                 }
                 
-                // RIGHT LEG BACK (shift right leg back)
-                for (let y = 29; y >= 21; y--) {
-                    s[y+1][17] = s[y][17];
-                    s[y+1][18] = s[y][18];
-                    s[y][17] = null;
-                    s[y][18] = null;
-                }
-                
-                // Scarf streaming
-                for (let y = 12; y <= 16; y++) {
-                    s[y][6] = COLORS.SCARF_LIGHT; s[y][7] = COLORS.SCARF_MID; s[y][8] = COLORS.SCARF_DARK;
-                }
-                
-                return s;
-            }
-
-            createRunFrame2() {
-                const s = this.createIdleFrame1();
-                
-                // RIGHT LEG FORWARD
+                // Right leg back and bent
                 for (let y = 20; y <= 29; y++) {
-                    s[y-1][17] = s[y][17];
-                    s[y-1][18] = s[y][18];
-                    s[y][17] = null;
-                    s[y][18] = null;
+                    const shift = Math.floor((y - 20) / 3);
+                    if (s[y][16]) s[y + 1][17 + shift] = s[y][16];
+                    if (s[y][17]) s[y + 1][18 + shift] = s[y][17];
+                    s[y][16] = null; s[y][17] = null;
                 }
                 
-                // LEFT LEG BACK
-                for (let y = 29; y >= 21; y--) {
-                    s[y+1][13] = s[y][13];
-                    s[y+1][14] = s[y][14];
-                    s[y][13] = null;
-                    s[y][14] = null;
-                }
-                
-                // Scarf
-                for (let y = 12; y <= 16; y++) {
-                    s[y][5] = COLORS.SCARF_MID; s[y][6] = COLORS.SCARF_LIGHT; s[y][7] = COLORS.SCARF_MID;
-                }
+                // Scarf movement
+                s[14][7] = C.SCARF_DARK; s[14][8] = C.SCARF_MID;
                 
                 return s;
             }
 
-            createJumpFrame() {
-                const s = this.createEmptySprite();
-                const idle = this.createIdleFrame1();
+            // Walking frame 2 - RIGHT LEG FORWARD
+            walk2() {
+                const s = this.base();
                 
+                // Right leg forward
+                for (let y = 20; y <= 29; y++) {
+                    const shift = Math.floor((29 - y) / 3);
+                    if (s[y][16]) s[y - 2][18 + shift] = s[y][16];
+                    if (s[y][17]) s[y - 2][19 + shift] = s[y][17];
+                    s[y][16] = null; s[y][17] = null;
+                }
+                
+                // Left leg back
+                for (let y = 20; y <= 29; y++) {
+                    const shift = Math.floor((y - 20) / 3);
+                    if (s[y][14]) s[y + 1][12 - shift] = s[y][14];
+                    if (s[y][15]) s[y + 1][13 - shift] = s[y][15];
+                    s[y][14] = null; s[y][15] = null;
+                }
+                
+                s[14][24] = C.SCARF_MID; s[14][25] = C.SCARF_DARK;
+                
+                return s;
+            }
+
+            // Jump - legs tucked
+            jump() {
+                const s = this.empty();
+                const b = this.base();
+                
+                // Copy upper body shifted up
                 for (let y = 3; y <= 18; y++) {
-                    for (let x = 0; x < 32; x++) {
-                        s[y - 2][x] = idle[y][x];
-                    }
+                    for (let x = 0; x < 32; x++) s[y - 2][x] = b[y][x];
                 }
                 
-                // Legs tucked
+                // Legs tucked up
                 for (let y = 18; y <= 23; y++) {
-                    s[y][12] = COLORS.ARMOR_LIGHT; s[y][13] = COLORS.ARMOR_MID;
-                    s[y][18] = COLORS.ARMOR_MID; s[y][19] = COLORS.ARMOR_LIGHT;
+                    s[y][13] = C.ARMOR_LIGHT; s[y][14] = C.ARMOR_MID;
+                    s[y][17] = C.ARMOR_MID; s[y][18] = C.ARMOR_LIGHT;
                 }
-                s[24][12] = COLORS.BOOT_MID; s[24][13] = COLORS.BOOT_DARK;
-                s[24][18] = COLORS.BOOT_DARK; s[24][19] = COLORS.BOOT_MID;
+                s[24][13] = C.BOOT_MID; s[24][14] = C.BOOT_DARK;
+                s[24][17] = C.BOOT_DARK; s[24][18] = C.BOOT_MID;
                 
                 // Scarf up
-                s[14][9] = COLORS.SCARF_LIGHT; s[15][8] = COLORS.SCARF_GLOW; s[16][7] = COLORS.SCARF_MID; s[17][7] = COLORS.SCARF_DARK;
-                s[14][22] = COLORS.SCARF_LIGHT; s[15][23] = COLORS.SCARF_GLOW; s[16][24] = COLORS.SCARF_MID; s[17][24] = COLORS.SCARF_DARK;
+                for (let y = 10; y >= 4; y--) {
+                    s[y][15] = C.SCARF_LIGHT; s[y][16] = C.SCARF_MID;
+                }
                 
                 return s;
             }
 
-            createFallFrame() {
-                const s = this.createEmptySprite();
-                const idle = this.createIdleFrame1();
+            // Fall - legs dangling
+            fall() {
+                const s = this.empty();
+                const b = this.base();
                 
                 for (let y = 3; y <= 18; y++) {
-                    for (let x = 0; x < 32; x++) s[y][x] = idle[y][x];
+                    for (let x = 0; x < 32; x++) s[y][x] = b[y][x];
                 }
                 
-                // Legs dangling
+                // Straight dangling legs
                 for (let y = 19; y <= 28; y++) {
-                    s[y][14] = (y >= 25) ? COLORS.BOOT_MID : COLORS.TUNIC_LIGHT;
-                    s[y][17] = (y >= 25) ? COLORS.BOOT_MID : COLORS.TUNIC_LIGHT;
+                    s[y][14] = (y >= 25) ? C.BOOT_MID : C.TUNIC_LIGHT;
+                    s[y][17] = (y >= 25) ? C.BOOT_MID : C.TUNIC_LIGHT;
                 }
                 
                 // Scarf vertical
-                for (let y = 11; y >= 4; y--) {
-                    s[y][15] = COLORS.SCARF_LIGHT; s[y][16] = COLORS.SCARF_MID;
+                for (let y = 11; y >= 1; y--) {
+                    s[y][15] = C.SCARF_LIGHT; s[y][16] = C.SCARF_MID;
                 }
-                s[4][15] = COLORS.SCARF_GLOW; s[3][15] = COLORS.SCARF_LIGHT; s[2][15] = COLORS.SCARF_MID; s[1][16] = COLORS.SCARF_DARK;
                 
                 return s;
             }
 
-            createAttackFrame() {
-                const s = this.createIdleFrame1();
+            // Climb - grabbing wall
+            climb() {
+                const s = this.base();
                 
-                for (let y = 16; y <= 24; y++) {
-                    s[y][19] = null; s[y][20] = null;
+                // One leg up, one down
+                for (let y = 20; y <= 25; y++) {
+                    s[y - 3][14] = s[y][14]; // Left leg higher
+                    s[y][14] = null;
                 }
                 
-                s[15][20] = COLORS.HILT_GOLD; s[15][21] = COLORS.HILT_JEWEL; s[16][20] = COLORS.HILT_GOLD;
-                
-                for (let x = 21; x <= 26; x++) {
-                    s[15][x] = (x % 2 === 0) ? COLORS.BLADE_LIGHT : COLORS.BLADE_MID;
-                    s[16][x] = COLORS.BLADE_DARK;
+                for (let y = 20; y <= 25; y++) {
+                    s[y + 2][17] = s[y][17]; // Right leg lower
+                    s[y][17] = null;
                 }
-                s[15][26] = COLORS.BLADE_LIGHT;
                 
-                s[14][24] = COLORS.SCARF_LIGHT; s[14][25] = COLORS.SCARF_MID; s[17][24] = COLORS.SCARF_MID;
+                // Arm reaching
+                s[14][10] = C.ARMOR_LIGHT; s[15][9] = C.SKIN_MID;
                 
                 return s;
             }
 
-            createBowFrame() {
-                const s = this.createIdleFrame1();
+            // Attack
+            attack() {
+                const s = this.base();
                 
                 // Remove sheathed sword
-                for (let y = 16; y <= 24; y++) {
-                    s[y][19] = null; s[y][20] = null;
-                }
+                for (let y = 16; y <= 24; y++) s[y][19] = null;
                 
-                // Bow held in front
-                // Bow body (vertical arc)
-                for (let y = 10; y <= 20; y++) {
-                    let offset = Math.abs(15 - y);
-                    s[y][20 + Math.floor(offset/3)] = COLORS.HILT_GOLD;
+                // Sword extended
+                s[15][20] = C.HILT_GOLD; s[16][20] = C.HILT_GOLD;
+                for (let x = 21; x <= 27; x++) {
+                    s[15][x] = C.BLADE_LIGHT;
+                    s[16][x] = C.BLADE_DARK;
                 }
-                
-                // Bow string
-                s[10][20] = COLORS.ARMOR_LIGHT;
-                s[20][20] = COLORS.ARMOR_LIGHT;
                 
                 return s;
             }
 
-            initializeAllSprites() {
+            init() {
                 this.sprites = {
-                    idle: [this.createIdleFrame1()],
-                    run: [this.createRunFrame1(), this.createRunFrame2()],
-                    jump: [this.createJumpFrame()],
-                    fall: [this.createFallFrame()],
-                    attack: [this.createAttackFrame()],
-                    bow: [this.createBowFrame()]
+                    idle: [this.base()],
+                    walk: [this.walk1(), this.walk2()],
+                    run: [this.walk1(), this.walk2()],
+                    jump: [this.jump()],
+                    fall: [this.fall()],
+                    climb: [this.climb()],
+                    attack: [this.attack()]
                 };
             }
 
-            drawSprite(ctx, animName, frame, x, y, facing, invincible, flashFrame) {
-                const anim = this.sprites[animName] || this.sprites.idle;
-                const sprite = anim[frame % anim.length];
+            draw(ctx, anim, frame, x, y, facing, invincible, flashFrame) {
+                const sprites = this.sprites[anim] || this.sprites.idle;
+                const sprite = sprites[frame % sprites.length];
                 
                 if (invincible && flashFrame) return;
                 
@@ -605,337 +739,103 @@
             }
         }
 
+        const warrior = new WarriorSprite();
+
         // ============================================================================
-        // ENEMY SPRITES - Extremely Detailed Pixel Art
+        // SIMPLIFIED ENEMY RENDERING (Performance optimization)
         // ============================================================================
 
-        class EnemySprites {
-            static createCrawler() {
-                const s = [];
-                for (let y = 0; y < 16; y++) s[y] = new Array(16).fill(null);
-                
-                // Demonic crawler body
-                // Head with horns
-                s[2][7] = COLORS.DEMON_DARK; s[2][8] = COLORS.DEMON_DARK;
-                s[3][6] = COLORS.DEMON_MID; s[3][7] = COLORS.DEMON_LIGHT; s[3][8] = COLORS.DEMON_LIGHT; s[3][9] = COLORS.DEMON_MID;
-                s[4][5] = COLORS.DEMON_DARK; s[4][6] = COLORS.DEMON_LIGHT; s[4][7] = COLORS.DEMON_EYE; s[4][8] = COLORS.DEMON_EYE; s[4][9] = COLORS.DEMON_LIGHT; s[4][10] = COLORS.DEMON_DARK;
-                s[5][6] = COLORS.DEMON_MID; s[5][7] = COLORS.DEMON_LIGHT; s[5][8] = COLORS.DEMON_LIGHT; s[5][9] = COLORS.DEMON_MID;
-                
-                // Hunched body
-                for (let y = 6; y <= 9; y++) {
-                    for (let x = 5; x <= 10; x++) {
-                        s[y][x] = (x % 2 === 0) ? COLORS.DEMON_MID : COLORS.DEMON_DARK;
-                    }
-                }
-                
-                // Legs crawling
-                s[10][4] = COLORS.DEMON_MID; s[11][3] = COLORS.DEMON_DARK; s[12][3] = COLORS.DEMON_DARK;
-                s[10][11] = COLORS.DEMON_MID; s[11][12] = COLORS.DEMON_DARK; s[12][12] = COLORS.DEMON_DARK;
-                
-                return s;
-            }
-
-            static createBat() {
-                const s = [];
-                for (let y = 0; y < 16; y++) s[y] = new Array(16).fill(null);
-                
-                // Bat wings spread
-                s[5][2] = COLORS.BAT_DARK; s[5][3] = COLORS.BAT_MID; s[5][4] = COLORS.BAT_LIGHT;
-                s[6][1] = COLORS.BAT_DARK; s[6][2] = COLORS.BAT_MID; s[6][3] = COLORS.BAT_LIGHT; s[6][4] = COLORS.BAT_MID;
-                
-                // Body
-                s[5][6] = COLORS.BAT_MID; s[5][7] = COLORS.BAT_LIGHT; s[5][8] = COLORS.BAT_LIGHT; s[5][9] = COLORS.BAT_MID;
-                s[6][6] = COLORS.BAT_LIGHT; s[6][7] = COLORS.BAT_EYE; s[6][8] = COLORS.BAT_EYE; s[6][9] = COLORS.BAT_LIGHT;
-                s[7][6] = COLORS.BAT_MID; s[7][7] = COLORS.BAT_DARK; s[7][8] = COLORS.BAT_DARK; s[7][9] = COLORS.BAT_MID;
-                
-                // Right wing
-                s[5][11] = COLORS.BAT_LIGHT; s[5][12] = COLORS.BAT_MID; s[5][13] = COLORS.BAT_DARK;
-                s[6][11] = COLORS.BAT_MID; s[6][12] = COLORS.BAT_LIGHT; s[6][13] = COLORS.BAT_MID; s[6][14] = COLORS.BAT_DARK;
-                
-                return s;
-            }
-
-            static createSentinel() {
-                const s = [];
-                for (let y = 0; y < 20; y++) s[y] = new Array(20).fill(null);
-                
-                // Void sentinel - floating orb
-                // Outer void
-                for (let y = 2; y <= 17; y++) {
-                    for (let x = 2; x <= 17; x++) {
-                        let dist = Math.hypot(x - 10, y - 10);
-                        if (dist < 8 && dist > 6) s[y][x] = COLORS.VOID_DARK;
-                        else if (dist < 6 && dist > 4) s[y][x] = COLORS.VOID_MID;
-                        else if (dist < 4) s[y][x] = COLORS.VOID_LIGHT;
-                    }
-                }
-                
-                // Core
-                s[8][9] = COLORS.VOID_GLOW; s[8][10] = COLORS.VOID_GLOW; s[8][11] = COLORS.VOID_GLOW;
-                s[9][9] = COLORS.VOID_GLOW; s[9][10] = COLORS.VOID_GLOW; s[9][11] = COLORS.VOID_GLOW;
-                s[10][9] = COLORS.VOID_GLOW; s[10][10] = COLORS.VOID_GLOW; s[10][11] = COLORS.VOID_GLOW;
-                
-                // Orbiting runes (4 points)
-                s[2][10] = COLORS.VOID_GLOW;
-                s[17][10] = COLORS.VOID_GLOW;
-                s[10][2] = COLORS.VOID_GLOW;
-                s[10][17] = COLORS.VOID_GLOW;
-                
-                return s;
-            }
-
-            static createBoneAmalgam() {
-                const s = [];
-                for (let y = 0; y < 24; y++) s[y] = new Array(20).fill(null);
-                
-                // Large skeletal creature
-                // Skull
-                for (let x = 6; x <= 13; x++) {
-                    s[3][x] = COLORS.BONE_DARK;
-                    s[4][x] = COLORS.BONE_MID;
-                }
-                s[5][7] = COLORS.BONE_DARK; s[5][8] = COLORS.BONE_DARK; // Eyes
-                s[5][11] = COLORS.BONE_DARK; s[5][12] = COLORS.BONE_DARK;
-                
-                // Spine
-                for (let y = 6; y <= 15; y++) {
-                    s[y][9] = COLORS.BONE_LIGHT;
-                    s[y][10] = COLORS.BONE_MID;
-                    if (y % 2 === 0) {
-                        s[y][8] = COLORS.BONE_MID; s[y][11] = COLORS.BONE_MID; // Ribs
-                    }
-                }
-                
-                // Arms (skeletal)
-                for (let y = 8; y <= 12; y++) {
-                    s[y][5] = COLORS.BONE_MID; s[y][14] = COLORS.BONE_MID;
-                }
-                
-                // Legs
-                for (let y = 16; y <= 22; y++) {
-                    s[y][8] = COLORS.BONE_MID; s[y][11] = COLORS.BONE_MID;
-                }
-                
-                return s;
-            }
-
-            static createSlimeBlob() {
-                const s = [];
-                for (let y = 0; y < 16; y++) s[y] = new Array(16).fill(null);
-                
-                // Blob shape
-                for (let y = 6; y <= 13; y++) {
-                    for (let x = 4; x <= 11; x++) {
-                        let dist = Math.hypot(x - 7.5, y - 10);
-                        if (dist < 5) {
-                            if (dist < 2) s[y][x] = COLORS.SLIME_LIGHT;
-                            else if (dist < 4) s[y][x] = COLORS.SLIME_MID;
-                            else s[y][x] = COLORS.SLIME_DARK;
-                        }
-                    }
-                }
-                
-                // Eyes
-                s[8][5] = COLORS.DEMON_DARK; s[8][10] = COLORS.DEMON_DARK;
-                
-                // Drips
-                s[14][6] = COLORS.SLIME_MID; s[15][6] = COLORS.SLIME_DARK;
-                s[14][9] = COLORS.SLIME_MID; s[15][9] = COLORS.SLIME_DARK;
-                
-                return s;
-            }
-
-            static drawEnemy(ctx, type, x, y, frame) {
-                let sprite;
-                switch(type) {
-                    case 'crawler': sprite = this.createCrawler(); break;
-                    case 'bat': sprite = this.createBat(); break;
-                    case 'sentinel': sprite = this.createSentinel(); break;
-                    case 'amalgam': sprite = this.createBoneAmalgam(); break;
-                    case 'slime': sprite = this.createSlimeBlob(); break;
-                    default: sprite = this.createCrawler();
-                }
-                
-                ctx.save();
-                ctx.translate(x, y);
-                
-                // Animation wobble for organic enemies
-                if (type === 'slime' || type === 'bat') {
-                    ctx.translate(0, Math.sin(frame * 0.1) * 2);
-                }
-                
-                const scale = type === 'amalgam' ? 1.5 : 2;
-                ctx.scale(scale, scale);
-                
-                for (let py = 0; py < sprite.length; py++) {
-                    for (let px = 0; px < sprite[py].length; px++) {
-                        const color = sprite[py][px];
-                        if (color) {
-                            ctx.fillStyle = color;
-                            ctx.fillRect(px - sprite[py].length/2, py - sprite.length/2, 1, 1);
-                        }
-                    }
-                }
-                
-                ctx.restore();
-            }
+        function drawEnemy(ctx, type, x, y, w, h) {
+            ctx.fillStyle = type === 'crawler' ? '#c33' : 
+                           type === 'bat' ? '#55d' : 
+                           type === 'sentinel' ? '#d0d' : '#8f8';
+            
+            ctx.fillRect(x - w/2, y - h/2, w, h);
+            
+            // Eyes
+            ctx.fillStyle = '#f00';
+            ctx.fillRect(x - w/4, y - h/4, 3, 3);
+            ctx.fillRect(x + w/4 - 3, y - h/4, 3, 3);
         }
 
         // ============================================================================
-        // PLATFORM SPRITES - Natural Stone/Ice Patterns
+        // PLATFORM RENDERING (Static, non-shimmering)
         // ============================================================================
 
-        class PlatformRenderer {
-            static drawStone(ctx, x, y, w, h) {
-                // Base layers
-                ctx.fillStyle = COLORS.STONE_DARK;
-                ctx.fillRect(x, y, w, h);
-                
-                // Stone texture - random blocks
-                for (let i = 0; i < w; i += 4) {
-                    for (let j = 0; j < h; j += 4) {
-                        let r = Math.random();
-                        if (r > 0.7) ctx.fillStyle = COLORS.STONE_MID;
-                        else if (r > 0.4) ctx.fillStyle = COLORS.STONE_LIGHT;
-                        else ctx.fillStyle = COLORS.STONE_DARK;
-                        ctx.fillRect(x + i, y + j, 4, 4);
-                    }
+        function drawPlatform(ctx, p) {
+            if (p.type === 'stone') {
+                ctx.fillStyle = '#1a1a1a';
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = '#2d2d2d';
+                ctx.fillRect(p.x, p.y, p.w, 3);
+                ctx.fillStyle = '#1a4d1a';
+                for (let i = 0; i < p.w; i += 10) {
+                    if (Math.random() > 0.7) ctx.fillRect(p.x + i, p.y, 4, 2);
                 }
-                
-                // Moss patches
-                for (let i = 0; i < w; i += 8) {
-                    if (Math.random() > 0.6) {
-                        ctx.fillStyle = COLORS.STONE_MOSS;
-                        ctx.fillRect(x + i, y, 4, 2);
-                    }
-                }
-                
-                // Edge highlight
-                ctx.fillStyle = COLORS.STONE_LIGHT;
-                ctx.fillRect(x, y, w, 2);
-            }
-
-            static drawIce(ctx, x, y, w, h) {
-                // Ice base
-                ctx.fillStyle = COLORS.ICE_MID;
-                ctx.fillRect(x, y, w, h);
-                
-                // Ice crystals
-                for (let i = 0; i < w; i += 6) {
-                    for (let j = 0; j < h; j += 6) {
-                        if (Math.random() > 0.5) {
-                            ctx.fillStyle = COLORS.ICE_LIGHT;
-                            ctx.fillRect(x + i, y + j, 2, 2);
-                        }
-                    }
-                }
-                
-                // Shine
-                ctx.fillStyle = COLORS.ICE_SHINE;
-                ctx.globalAlpha = 0.6;
-                ctx.fillRect(x, y, w, 3);
-                ctx.globalAlpha = 1;
-                
-                // Cracks
-                ctx.strokeStyle = COLORS.ICE_DARK;
-                ctx.lineWidth = 1;
-                for (let i = 0; i < 3; i++) {
-                    let crackX = x + Math.random() * w;
+            } else if (p.type === 'ice') {
+                ctx.fillStyle = '#7ab3d4';
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = '#b3e0ff';
+                ctx.fillRect(p.x, p.y, p.w, 4);
+            } else if (p.type === 'slime') {
+                ctx.fillStyle = '#1a7a1a';
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.fillStyle = '#29cc29';
+                for (let i = 0; i < p.w; i += 12) {
                     ctx.beginPath();
-                    ctx.moveTo(crackX, y);
-                    ctx.lineTo(crackX + (Math.random() - 0.5) * 10, y + h);
-                    ctx.stroke();
-                }
-            }
-
-            static drawSlime(ctx, x, y, w, h) {
-                // Slime base
-                ctx.fillStyle = COLORS.SLIME_DARK;
-                ctx.fillRect(x, y, w, h);
-                
-                // Bubbles on top
-                ctx.fillStyle = COLORS.SLIME_LIGHT;
-                for (let i = 0; i < w; i += 12) {
-                    ctx.beginPath();
-                    ctx.arc(x + i + 6, y + 3, 4, 0, Math.PI * 2);
+                    ctx.arc(p.x + i + 6, p.y + 3, 4, 0, Math.PI * 2);
                     ctx.fill();
                 }
-                
-                // Drips
-                ctx.fillStyle = COLORS.SLIME_MID;
-                for (let i = 5; i < w; i += 15) {
-                    ctx.fillRect(x + i, y + h, 3, 4);
-                }
             }
         }
-
-        const warriorSprite = new WarriorSprite();
 
         // ============================================================================
         // GAME STATE
         // ============================================================================
 
-        let W, H;
         const GRAVITY = 0.5;
         const FRICTION_STONE = 0.85;
         const FRICTION_ICE = 0.98;
-        const WALL_GAP = 300; 
+        const WALL_GAP = 300;
         const FALL_DMG_THRESHOLD = 450;
         
         let gameActive = false;
-        let camY = 0;
-        let score = 0;
-        let frame = 0;
-        let shake = 0;
-        let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false };
+        let camY = 0, score = 0, frame = 0, shake = 0;
+        let inputs = { x: 0, y: 0, jump: false, atk: false, activeStick: false, downTime: 0 };
 
         let player = {
             x: 0, y: 0, w: 20, h: 55,
-            vx: 0, vy: 0,
-            hp: 100, maxHp: 100,
-            facing: 1,
-            aimAngle: 0,
-            grounded: false,
-            wallSliding: false,
+            vx: 0, vy: 0, hp: 100, maxHp: 100,
+            facing: 1, aimAngle: 0,
+            grounded: false, wallSliding: false,
             fallStartY: 0,
-            animState: 'idle',
-            animFrame: 0,
-            animTimer: 0,
+            animState: 'idle', animFrame: 0, animTimer: 0,
             invincible: 0,
-            weapon: 'sword', // 'sword' or 'bow'
-            arrows: 0,
-            atkCooldown: 0,
-            friction: FRICTION_STONE
+            weapon: 'sword', arrows: 0,
+            atkCooldown: 0, friction: FRICTION_STONE
         };
 
-        let platforms = [];
-        let particles = [];
-        let enemies = [];
-        let items = [];
-        let projectiles = [];
-        let arrows = [];
-        let bgStars = [];
+        let platforms = [], particles = [], enemies = [], items = [], projectiles = [], arrows = [], bgStars = [];
 
         // ============================================================================
-        // INPUT
+        // INPUT HANDLING
         // ============================================================================
 
         const stickZone = document.getElementById('joystick');
         const stickBase = document.getElementById('stick-base');
         const stickKnob = document.getElementById('stick-knob');
-        let touchId = null; 
-        let startX, startY;
+        let touchId = null, startX, startY;
 
         stickZone.addEventListener('touchstart', e => {
             e.preventDefault();
-            let t = e.changedTouches[0];
+            const t = e.changedTouches[0];
             touchId = t.identifier;
             startX = t.clientX; startY = t.clientY;
-            let rect = stickZone.getBoundingClientRect();
+            const rect = stickZone.getBoundingClientRect();
             stickBase.style.display = 'block';
-            stickBase.style.left = (startX - rect.left - 45) + 'px';
-            stickBase.style.top = (startY - rect.top - 45) + 'px';
-            stickKnob.style.transform = `translate(0px, 0px)`;
+            stickBase.style.left = (startX - rect.left - 50) + 'px';
+            stickBase.style.top = (startY - rect.top - 50) + 'px';
+            stickKnob.style.transform = 'translate(0px, 0px)';
             inputs.activeStick = true;
         }, {passive: false});
 
@@ -943,12 +843,15 @@
             e.preventDefault();
             for(let i=0; i<e.changedTouches.length; i++) {
                 if(e.changedTouches[i].identifier === touchId) {
-                    let t = e.changedTouches[i];
+                    const t = e.changedTouches[i];
                     let dx = t.clientX - startX;
                     let dy = t.clientY - startY;
-                    let dist = Math.hypot(dx, dy);
-                    let max = 45;
-                    if(dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
+                    const dist = Math.hypot(dx, dy);
+                    const max = 50;
+                    if(dist > max) { 
+                        dx = (dx/dist)*max; 
+                        dy = (dy/dist)*max; 
+                    }
                     stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
                     inputs.x = dx / max; 
                     inputs.y = dy / max;
@@ -957,39 +860,39 @@
         }, {passive: false});
 
         const resetStick = () => { 
-            touchId = null; inputs.x = 0; inputs.y = 0; 
-            stickBase.style.display = 'none'; inputs.activeStick = false; 
+            touchId = null; 
+            inputs.x = 0; 
+            inputs.y = 0; 
+            inputs.downTime = 0;
+            stickBase.style.display = 'none'; 
+            inputs.activeStick = false; 
         };
+        
         stickZone.addEventListener('touchend', resetStick);
         stickZone.addEventListener('touchcancel', resetStick);
 
         const bindBtn = (id, key) => {
-            let el = document.getElementById(id);
-            el.addEventListener('touchstart', e => { e.preventDefault(); inputs[key] = true; });
-            el.addEventListener('touchend', e => { e.preventDefault(); inputs[key] = false; });
+            const el = document.getElementById(id);
+            el.addEventListener('touchstart', e => { 
+                e.preventDefault(); 
+                inputs[key] = true; 
+            });
+            el.addEventListener('touchend', e => { 
+                e.preventDefault(); 
+                inputs[key] = false; 
+            });
         };
+        
         bindBtn('btn-jump', 'jump');
         bindBtn('btn-atk', 'atk');
 
         // ============================================================================
-        // CORE FUNCTIONS
+        // GAME FUNCTIONS
         // ============================================================================
 
-        function resize() {
-            W = window.innerWidth; H = window.innerHeight;
-            canvas.width = W; canvas.height = H;
-            bgStars = [];
-            for(let i=0; i<80; i++) bgStars.push({
-                x: Math.random()*W, 
-                y: Math.random()*H, 
-                s: Math.random()*2 + 1,
-                speed: Math.random() * 0.5 + 0.2
-            });
+        function getTunnelOffset(y) { 
+            return Math.sin(y * 0.002) * (W * 0.25); 
         }
-        window.addEventListener('resize', resize);
-        resize();
-
-        function getTunnelOffset(y) { return Math.sin(y * 0.002) * (W * 0.25); }
         
         function showToast(msg, color="#fff") {
             const t = document.getElementById('toast-msg'); 
@@ -1002,28 +905,47 @@
         function startGame() {
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('game-over').classList.add('hidden');
-            player.x = W/2; player.y = 100; player.vx = 0; player.vy = 0;
-            player.hp = 100; player.weapon = 'sword'; player.arrows = 0;
-            player.animState = 'idle'; player.animFrame = 0; player.animTimer = 0;
+            
+            player.x = W/2; 
+            player.y = 100; 
+            player.vx = 0; 
+            player.vy = 0;
+            player.hp = 100; 
+            player.weapon = 'sword'; 
+            player.arrows = 0;
+            player.animState = 'idle'; 
+            player.animFrame = 0; 
+            player.animTimer = 0;
             player.fallStartY = player.y;
-            camY = 0; score = 0; frame = 0;
-            platforms = []; items = []; particles = []; enemies = []; projectiles = []; arrows = [];
+            
+            camY = 0; 
+            score = 0; 
+            frame = 0;
+            
+            platforms = []; 
+            items = []; 
+            particles = []; 
+            enemies = []; 
+            projectiles = []; 
+            arrows = [];
+            
             platforms.push({x: W/2-100, y: 300, w: 200, h: 20, type:'stone'});
             genWorld(350, 2000);
+            
             gameActive = true;
-            loop();
+            requestAnimationFrame(loop);
         }
 
         function genWorld(sy, ey) {
             let y = sy;
             while(y < ey) {
                 y += 90 + Math.random() * 80;
-                let offset = getTunnelOffset(y);
-                let tunnelCenter = (W/2) + offset;
-                let w = 80 + Math.random() * 100;
-                let minX = tunnelCenter - (WALL_GAP/2) + 20;
-                let maxX = tunnelCenter + (WALL_GAP/2) - w - 20;
-                let x = minX + Math.random() * (maxX - minX);
+                const offset = getTunnelOffset(y);
+                const tunnelCenter = (W/2) + offset;
+                const w = 80 + Math.random() * 100;
+                const minX = tunnelCenter - (WALL_GAP/2) + 20;
+                const maxX = tunnelCenter + (WALL_GAP/2) - w - 20;
+                const x = minX + Math.random() * (maxX - minX);
                 
                 let pType = 'stone';
                 if (Math.random() < 0.2) pType = 'ice';
@@ -1031,22 +953,17 @@
 
                 platforms.push({x, y, w, h: 25, type: pType});
 
-                // Enemy spawning with variety
                 if (Math.random() < 0.5 && y > 500) {
                     let type = 'crawler';
                     if (y > 800 && Math.random() > 0.7) type = 'bat';
-                    if (y > 1200 && Math.random() > 0.8) type = 'slime';
                     if (y > 1500 && Math.random() > 0.85) type = 'sentinel';
-                    if (y > 2000 && Math.random() > 0.9) type = 'amalgam';
                     
                     enemies.push({
-                        type: type,
-                        x: x + w/2, y: y - 30,
-                        w: type === 'amalgam' ? 40 : 30, 
-                        h: type === 'amalgam' ? 48 : 30,
+                        type, x: x + w/2, y: y - 30,
+                        w: 30, h: 30,
                         vx: type === 'sentinel' ? 0 : (Math.random() > 0.5 ? 1 : -1),
-                        hp: type === 'amalgam' ? 80 : type === 'sentinel' ? 60 : 30,
-                        maxHp: type === 'amalgam' ? 80 : type === 'sentinel' ? 60 : 30,
+                        hp: type === 'sentinel' ? 60 : 30,
+                        maxHp: type === 'sentinel' ? 60 : 30,
                         patrol: [x, x+w],
                         timer: 0,
                     });
@@ -1054,9 +971,23 @@
             }
         }
 
-        function update() {
+        function update(dt) {
             if(!gameActive) return;
             frame++;
+            
+            // DOWN PRESS DETECTION for climb-down
+            if (inputs.y > 0.7 && player.grounded) {
+                inputs.downTime += dt;
+                if (inputs.downTime > 2) { // 2 seconds = 120 frames at 60fps
+                    // Drop through platform
+                    player.y += 10;
+                    player.grounded = false;
+                    inputs.downTime = 0;
+                    showToast("DROP!", "#fa0");
+                }
+            } else {
+                inputs.downTime = 0;
+            }
             
             // Aiming
             if (inputs.activeStick && (Math.abs(inputs.x) > 0.1 || Math.abs(inputs.y) > 0.1)) {
@@ -1076,36 +1007,43 @@
             player.vx *= player.friction;
 
             // Wall Slide
-            let tunnelOffset = getTunnelOffset(player.y);
-            let leftWall = (W/2) + tunnelOffset - (WALL_GAP/2);
-            let rightWall = (W/2) + tunnelOffset + (WALL_GAP/2);
+            const tunnelOffset = getTunnelOffset(player.y);
+            const leftWall = (W/2) + tunnelOffset - (WALL_GAP/2);
+            const rightWall = (W/2) + tunnelOffset + (WALL_GAP/2);
             player.wallSliding = false;
 
             if(player.x < leftWall + 10) { 
-                player.x = leftWall + 10; player.vx = 0; 
+                player.x = leftWall + 10; 
+                player.vx = 0; 
                 if(player.vy > 0) { 
-                    player.vy*=0.8; player.fallStartY = player.y; 
-                    player.wallSliding = true; player.facing = 1;
+                    player.vy *= 0.8; 
+                    player.fallStartY = player.y; 
+                    player.wallSliding = true; 
+                    player.facing = 1;
                 }
             }
+            
             if(player.x > rightWall - 10) { 
-                player.x = rightWall - 10; player.vx = 0; 
+                player.x = rightWall - 10; 
+                player.vx = 0; 
                 if(player.vy > 0) { 
-                    player.vy*=0.8; player.fallStartY = player.y; 
-                    player.wallSliding = true; player.facing = -1;
+                    player.vy *= 0.8; 
+                    player.fallStartY = player.y; 
+                    player.wallSliding = true; 
+                    player.facing = -1;
                 }
             }
 
             // Animation State
-            if (player.animState !== 'attack' && player.animState !== 'bow') {
+            if (player.animState !== 'attack') {
                 if (player.wallSliding) player.animState = 'climb';
                 else if (!player.grounded) player.animState = player.vy < 0 ? 'jump' : 'fall';
-                else if (Math.abs(inputs.x) > 0.1) player.animState = 'run';
+                else if (Math.abs(inputs.x) > 0.1) player.animState = 'walk';
                 else player.animState = 'idle';
             }
             
             player.animTimer++;
-            if (player.animTimer > 8) {
+            if (player.animTimer > 6) {
                 player.animTimer = 0;
                 player.animFrame++;
             }
@@ -1113,27 +1051,31 @@
             // Jump
             if(inputs.jump) {
                 if (player.grounded) {
-                    player.vy = -12.5; player.grounded = false; player.fallStartY = player.y;
+                    player.vy = -12.5; 
+                    player.grounded = false; 
+                    player.fallStartY = player.y;
                     spawnParticles(player.x, player.y + player.h/2, '#888', 8);
                 } else if (player.wallSliding) {
-                    player.vy = -12.5; player.vx = player.facing === 1 ? 10 : -10;
+                    player.vy = -12.5; 
+                    player.vx = player.facing === 1 ? 10 : -10;
                     player.wallSliding = false;
                 }
             }
 
-            // Attack
+            // Attack (FASTER)
             if(inputs.atk && player.atkCooldown <= 0) {
                 if (player.weapon === 'sword') {
-                    player.atkCooldown = 20;
+                    player.atkCooldown = 12; // Reduced from 20
                     player.animState = 'attack';
-                    player.animTimer = 0; player.animFrame = 0;
+                    player.animTimer = 0; 
+                    player.animFrame = 0;
                     
-                    let slashX = player.x + Math.cos(player.aimAngle) * 30;
-                    let slashY = player.y + Math.sin(player.aimAngle) * 30;
+                    const slashX = player.x + Math.cos(player.aimAngle) * 30;
+                    const slashY = player.y + Math.sin(player.aimAngle) * 30;
                     spawnSlashVisual(slashX, slashY, player.aimAngle);
                     
-                    let hitDist = 45;
-                    let dmg = 25;
+                    const hitDist = 45;
+                    const dmg = 25;
 
                     enemies.forEach(e => {
                         if (Math.hypot((player.x + Math.cos(player.aimAngle)*30) - e.x, 
@@ -1145,7 +1087,7 @@
                     });
 
                     for(let i=projectiles.length-1; i>=0; i--) {
-                        let p = projectiles[i];
+                        const p = projectiles[i];
                         if (Math.hypot((player.x + Math.cos(player.aimAngle)*30) - p.x, 
                             (player.y + Math.sin(player.aimAngle)*30) - p.y) < hitDist) {
                             projectiles.splice(i, 1);
@@ -1155,15 +1097,12 @@
                         }
                     }
                 } else if (player.weapon === 'bow' && player.arrows > 0) {
-                    player.atkCooldown = 30;
-                    player.animState = 'bow';
-                    player.animTimer = 0; player.animFrame = 0;
+                    player.atkCooldown = 20;
+                    player.animState = 'attack';
                     player.arrows--;
                     
-                    // Shoot arrow
                     arrows.push({
-                        x: player.x,
-                        y: player.y,
+                        x: player.x, y: player.y,
                         vx: Math.cos(player.aimAngle) * 12,
                         vy: Math.sin(player.aimAngle) * 12,
                         angle: player.aimAngle,
@@ -1175,14 +1114,14 @@
             }
             
             if(player.atkCooldown > 0) player.atkCooldown--;
-            if (player.atkCooldown < 10 && (player.animState === 'attack' || player.animState === 'bow')) {
+            if (player.atkCooldown < 6 && player.animState === 'attack') {
                 player.animState = 'idle';
             }
 
             if(player.invincible > 0) player.invincible--;
 
             // Platforms
-            let wasGrounded = player.grounded;
+            const wasGrounded = player.grounded;
             player.grounded = false;
             player.friction = FRICTION_STONE;
 
@@ -1193,10 +1132,11 @@
                        player.y + player.h/2 <= p.y + p.h + player.vy) {
                         
                         if (!wasGrounded) {
-                            let fallDist = player.y - player.fallStartY;
+                            const fallDist = player.y - player.fallStartY;
                             if (fallDist > FALL_DMG_THRESHOLD) {
-                                let dmg = Math.floor((fallDist - FALL_DMG_THRESHOLD) / 10);
-                                player.hp -= dmg; shake = 15; 
+                                const dmg = Math.floor((fallDist - FALL_DMG_THRESHOLD) / 10);
+                                player.hp -= dmg; 
+                                shake = 15; 
                                 spawnParticles(player.x, p.y, '#fff', 15);
                                 showToast(`FALL -${dmg}`, "#f44");
                             }
@@ -1208,12 +1148,15 @@
                             player.vy = -15;
                             spawnParticles(player.x, p.y, '#0f0', 8);
                         } else {
-                            player.grounded = true; player.vy = 0; 
+                            player.grounded = true; 
+                            player.vy = 0; 
                             player.y = p.y - player.h/2;
                         }
                     }
                 });
-            } else { player.fallStartY = player.y; }
+            } else { 
+                player.fallStartY = player.y; 
+            }
 
             // Arrows
             arrows.forEach((arr, i) => {
@@ -1228,7 +1171,6 @@
                     return;
                 }
                 
-                // Arrow hits enemies
                 enemies.forEach(e => {
                     if (Math.hypot(arr.x - e.x, arr.y - e.y) < 20) {
                         e.hp -= 40;
@@ -1242,10 +1184,9 @@
             // Enemies
             enemies.forEach((e, i) => {
                 if(e.hp <= 0) { 
-                    // DROP FLASK/ITEM on death
-                    let dropRoll = Math.random();
-                    if (dropRoll < 0.6) { // 60% chance to drop flask
-                        let types = ['red', 'blue', 'green', 'orange'];
+                    const dropRoll = Math.random();
+                    if (dropRoll < 0.6) {
+                        const types = ['red', 'blue', 'green', 'orange'];
                         items.push({ 
                             x: e.x, 
                             y: e.y - 20, 
@@ -1259,16 +1200,16 @@
                     return; 
                 }
 
-                if (e.type === 'crawler' || e.type === 'slime') {
+                if (e.type === 'crawler') {
                     e.x += e.vx; 
                     if(e.x < e.patrol[0] || e.x > e.patrol[1]) e.vx *= -1;
                 } else if (e.type === 'bat') {
                     e.x += Math.sin(frame * 0.05) * 3;
                     e.y += (player.y - e.y) * 0.02;
-                } else if (e.type === 'sentinel' || e.type === 'amalgam') {
+                } else if (e.type === 'sentinel') {
                     e.timer++;
-                    if (e.timer > (e.type === 'amalgam' ? 90 : 120)) {
-                        let angle = Math.atan2(player.y - e.y, player.x - e.x);
+                    if (e.timer > 120) {
+                        const angle = Math.atan2(player.y - e.y, player.x - e.x);
                         projectiles.push({
                             x: e.x, y: e.y, 
                             vx: Math.cos(angle)*5, 
@@ -1283,10 +1224,9 @@
                 if (player.vy > 0 && Math.abs(player.x - e.x) < 25 && 
                     player.y < e.y - 15 && player.y > e.y - 45) {
                     
-                    // Drop flask on stomp
-                    let dropRoll = Math.random();
+                    const dropRoll = Math.random();
                     if (dropRoll < 0.6) {
-                        let types = ['red', 'blue', 'green', 'orange'];
+                        const types = ['red', 'blue', 'green', 'orange'];
                         items.push({ 
                             x: e.x, 
                             y: e.y - 20, 
@@ -1303,26 +1243,31 @@
                     return;
                 }
 
-                // Damage player
                 if (player.invincible <= 0 && 
                     Math.hypot(player.x - e.x, (player.y-10) - e.y) < 25) {
-                    player.hp -= 15; shake = 10; player.invincible = 60;
-                    player.vy = -6; player.vx = -Math.sign(e.x - player.x) * 8;
+                    player.hp -= 15; 
+                    shake = 10; 
+                    player.invincible = 60;
+                    player.vy = -6; 
+                    player.vx = -Math.sign(e.x - player.x) * 8;
                 }
             });
 
             // Projectiles
             projectiles.forEach((p, i) => {
-                p.x += p.vx; p.y += p.vy; p.life--;
+                p.x += p.vx; 
+                p.y += p.vy; 
+                p.life--;
                 if (p.life <= 0) projectiles.splice(i, 1);
                 else if (player.invincible <= 0 && 
                     Math.hypot(player.x - p.x, (player.y-10) - p.y) < 20) {
-                    player.hp -= 10; player.invincible = 30; 
+                    player.hp -= 10; 
+                    player.invincible = 30; 
                     projectiles.splice(i, 1);
                 }
             });
 
-            // Items (with physics)
+            // Items
             items.forEach((it, i) => {
                 it.vy += GRAVITY * 0.3;
                 it.y += it.vy;
@@ -1340,7 +1285,7 @@
                 document.getElementById('final-depth').innerText = `DEPTH: ${Math.floor(score/10)}M`; 
             }
             
-            let targetY = player.y - H * 0.4;
+            const targetY = player.y - H * 0.4;
             if(targetY > camY) camY = targetY;
             if(player.y > score) score = player.y;
 
@@ -1363,8 +1308,7 @@
                 showToast("SHIELD!", "#44f"); 
             } else if(type === 'green') { 
                 showToast("FEATHER!", "#4f4"); 
-            } else if(type === 'orange') { 
-                // Weapon upgrade - Bow!
+            } else if(type === 'orange') {
                 player.weapon = 'bow';
                 player.arrows = 12;
                 showToast("BOW ACQUIRED!", "#fa0");
@@ -1375,7 +1319,7 @@
             document.getElementById('hp-bar').style.width = Math.max(0, player.hp) + '%';
             document.getElementById('score-disp').innerText = Math.floor(score/10) + 'M';
             
-            let weaponText = player.weapon === 'sword' ? 'SWORD' : 'BOW';
+            const weaponText = player.weapon === 'sword' ? 'SWORD' : 'BOW';
             document.getElementById('weapon-text').innerText = weaponText;
             
             if (player.weapon === 'bow') {
@@ -1390,16 +1334,18 @@
         }
 
         function spawnParticles(x, y, c, n) {
-            for(let i=0;i<n;i++) particles.push({
-                x, y, 
-                vx:(Math.random()-0.5)*5, 
-                vy:(Math.random()-0.5)*5-2, 
-                life:30, c
-            });
+            for(let i=0; i<n; i++) {
+                particles.push({
+                    x, y, 
+                    vx: (Math.random()-0.5)*5, 
+                    vy: (Math.random()-0.5)*5-2, 
+                    life: 30, c
+                });
+            }
         }
         
         function spawnSlashVisual(x, y, angle) {
-            particles.push({x, y, type:'slash', life:12, angle: angle});
+            particles.push({x, y, type:'slash', life:8, angle});
         }
 
         // ============================================================================
@@ -1407,18 +1353,17 @@
         // ============================================================================
 
         function draw() {
-            // Background with depth gradient
-            let depthFactor = Math.min(1, score / 10000);
-            let r = Math.floor(10 + (20*depthFactor));
-            let b = Math.floor(30 - (10*depthFactor));
+            const depthFactor = Math.min(1, score / 10000);
+            const r = Math.floor(10 + (20*depthFactor));
+            const b = Math.floor(30 - (10*depthFactor));
             ctx.fillStyle = `rgb(${r},10,${b})`;
-            ctx.fillRect(0,0,W,H);
+            ctx.fillRect(0, 0, W, H);
 
-            // Animated stars
+            // Stars
             ctx.fillStyle = "rgba(255,255,255,0.8)";
             bgStars.forEach(s => {
                 let sy = (s.y - camY * s.speed) % H; 
-                if(sy<0) sy+=H;
+                if(sy < 0) sy += H;
                 ctx.fillRect(s.x, sy, s.s, s.s);
             });
 
@@ -1427,35 +1372,24 @@
 
             // Tunnel walls
             ctx.fillStyle = "#0a0a0a";
-            let startDrawY = Math.floor(camY / 20) * 20;
+            const startDrawY = Math.floor(camY / 20) * 20;
             for(let y = startDrawY; y < camY + H + 50; y += 20) {
-                let off = getTunnelOffset(y);
-                let cx = (W/2) + off;
+                const off = getTunnelOffset(y);
+                const cx = (W/2) + off;
                 ctx.fillRect(0, y, cx - (WALL_GAP/2), 22);
                 ctx.fillRect(cx + (WALL_GAP/2), y, W - (cx + WALL_GAP/2), 22);
             }
 
-            // Platforms with pixel art
-            platforms.forEach(p => {
-                if (p.type === 'stone') {
-                    PlatformRenderer.drawStone(ctx, p.x, p.y, p.w, p.h);
-                } else if (p.type === 'ice') {
-                    PlatformRenderer.drawIce(ctx, p.x, p.y, p.w, p.h);
-                } else if (p.type === 'slime') {
-                    PlatformRenderer.drawSlime(ctx, p.x, p.y, p.w, p.h);
-                }
-            });
+            // Platforms
+            platforms.forEach(p => drawPlatform(ctx, p));
 
             // Enemies
             enemies.forEach(e => {
-                EnemySprites.drawEnemy(ctx, e.type, e.x, e.y, frame);
+                drawEnemy(ctx, e.type, e.x, e.y, e.w, e.h);
                 
-                // Health bar
                 if (e.hp < e.maxHp) {
-                    let barW = 30;
-                    let barH = 4;
-                    let barX = e.x - barW/2;
-                    let barY = e.y - e.h/2 - 10;
+                    const barW = 30, barH = 4;
+                    const barX = e.x - barW/2, barY = e.y - e.h/2 - 10;
                     ctx.fillStyle = '#000';
                     ctx.fillRect(barX, barY, barW, barH);
                     ctx.fillStyle = '#f00';
@@ -1463,29 +1397,17 @@
                 }
             });
 
-            // Items (flasks)
+            // Items
             items.forEach(it => {
-                let colors = {
-                    red: '#f44',
-                    blue: '#44f',
-                    green: '#4f4',
-                    orange: '#fa0'
-                };
-                let c = colors[it.type];
-                
-                // Flask shape
+                const colors = { red: '#f44', blue: '#44f', green: '#4f4', orange: '#fa0' };
+                const c = colors[it.type];
                 ctx.fillStyle = c;
-                ctx.shadowBlur = 15;
+                ctx.shadowBlur = 12;
                 ctx.shadowColor = c;
-                
-                // Body
                 ctx.fillRect(it.x - 4, it.y - 8, 8, 12);
-                // Neck
                 ctx.fillRect(it.x - 2, it.y - 10, 4, 2);
-                // Cork
                 ctx.fillStyle = '#654';
                 ctx.fillRect(it.x - 2, it.y - 12, 4, 2);
-                
                 ctx.shadowBlur = 0;
             });
 
@@ -1499,31 +1421,31 @@
                     ctx.beginPath(); 
                     ctx.arc(0, 0, 50, -Math.PI/3, Math.PI/3); 
                     ctx.strokeStyle = "#0ff";
-                    ctx.lineWidth = 6 * (p.life/12); 
-                    ctx.shadowBlur = 20; 
+                    ctx.lineWidth = 5 * (p.life/8); 
+                    ctx.shadowBlur = 15; 
                     ctx.shadowColor = "#0ff";
                     ctx.stroke(); 
                     ctx.restore();
                 } else {
-                    p.x+=p.vx; 
-                    p.y+=p.vy; 
+                    p.x += p.vx; 
+                    p.y += p.vy; 
                     p.vy += GRAVITY * 0.2;
                     p.life--;
-                    ctx.fillStyle=p.c; 
+                    ctx.fillStyle = p.c; 
                     ctx.fillRect(p.x, p.y, 3, 3);
                 }
-                if(p.life<=0) particles.splice(i,1);
+                if(p.life <= 0) particles.splice(i, 1);
             });
 
             // Projectiles
             projectiles.forEach(p => {
-                ctx.fillStyle="#f0f"; 
-                ctx.shadowBlur=15; 
-                ctx.shadowColor="#f0f";
+                ctx.fillStyle = "#f0f"; 
+                ctx.shadowBlur = 12; 
+                ctx.shadowColor = "#f0f";
                 ctx.beginPath(); 
                 ctx.arc(p.x, p.y, 6, 0, Math.PI*2); 
                 ctx.fill(); 
-                ctx.shadowBlur=0;
+                ctx.shadowBlur = 0;
             });
 
             // Arrows
@@ -1531,29 +1453,22 @@
                 ctx.save();
                 ctx.translate(arr.x, arr.y);
                 ctx.rotate(arr.angle);
-                
-                // Arrow shaft
                 ctx.fillStyle = '#8b4513';
                 ctx.fillRect(-8, -1, 16, 2);
-                
-                // Arrow head
                 ctx.fillStyle = '#888';
                 ctx.beginPath();
                 ctx.moveTo(8, 0);
                 ctx.lineTo(4, -3);
                 ctx.lineTo(4, 3);
                 ctx.fill();
-                
-                // Fletching
                 ctx.fillStyle = '#f44';
                 ctx.fillRect(-10, -2, 3, 4);
-                
                 ctx.restore();
             });
 
             // Player
-            let flashFrame = (frame % 4 === 0);
-            warriorSprite.drawSprite(
+            const flashFrame = (frame % 4 === 0);
+            warrior.draw(
                 ctx,
                 player.animState,
                 player.animFrame,
@@ -1567,19 +1482,24 @@
             ctx.restore();
 
             // Vignette
-            let rad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, H*0.9);
+            const rad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, H*0.9);
             rad.addColorStop(0, "transparent");
             rad.addColorStop(1, "rgba(0,0,0,0.7)");
             ctx.fillStyle = rad;
-            ctx.fillRect(0,0,W,H);
+            ctx.fillRect(0, 0, W, H);
         }
 
-        function loop() {
-            if(gameActive) {
-                update();
-                draw();
-                requestAnimationFrame(loop);
-            }
+        let lastTime = performance.now();
+        function loop(currentTime) {
+            if(!gameActive) return;
+            
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            update(deltaTime);
+            draw();
+            
+            requestAnimationFrame(loop);
         }
     </script>
 </body>
