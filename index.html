@@ -416,21 +416,17 @@
         // MOBILE OPTIMIZATION
         // ============================================================================
 
-        let dpr = Math.min(window.devicePixelRatio || 1, 2); // Limit to 2x for performance
-        let W, H, displayW, displayH;
+        let W, H;
+        let bgStars = [];
 
         function resize() {
-            displayW = window.innerWidth;
-            displayH = window.innerHeight;
-            
-            // Use lower resolution for better performance on mobile
-            W = Math.floor(displayW * dpr);
-            H = Math.floor(displayH * dpr);
+            W = window.innerWidth;
+            H = window.innerHeight;
             
             canvas.width = W;
             canvas.height = H;
-            canvas.style.width = displayW + 'px';
-            canvas.style.height = displayH + 'px';
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
             
             ctx.imageSmoothingEnabled = false;
             
@@ -815,7 +811,7 @@
             atkCooldown: 0, friction: FRICTION_STONE
         };
 
-        let platforms = [], particles = [], enemies = [], items = [], projectiles = [], arrows = [], bgStars = [];
+        let platforms = [], particles = [], enemies = [], items = [], projectiles = [], arrows = [];
 
         // ============================================================================
         // INPUT HANDLING
@@ -935,6 +931,9 @@
             gameActive = true;
             requestAnimationFrame(loop);
         }
+
+        // Make startGame available globally for onclick
+        window.startGame = startGame;
 
         function genWorld(sy, ey) {
             let y = sy;
