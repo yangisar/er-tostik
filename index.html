@@ -1,1305 +1,766 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-fullscreen">
-    <meta name="mobile-web-app-capable" content="yes">
-    <title>Er Tostik: Descent to the Underworld</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Er Tostik: The Descent</title>
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { background: #000; overflow: hidden; font-family: 'Press Start 2P', cursive; touch-action: none; user-select: none; }
+    canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+    
+    /* UI OVERLAY */
+    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
+    
+    /* HUD */
+    .hud { padding: 10px; display: flex; justify-content: space-between; text-shadow: 2px 2px 0 #000; transition: opacity 1s; opacity: 0; }
+    .bar-frame { width: 100px; height: 12px; background: #222; border: 2px solid #fff; position: relative; }
+    .hp-fill { height: 100%; background: #f00; width: 100%; transition: width 0.2s; }
+    .score-block { text-align: right; color: #fff; }
+    .big-score { font-size: 20px; color: #0ff; margin-bottom: 5px; }
 
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+    /* CONTROLS */
+    .controls { padding: 20px; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: auto; }
+    .d-pad { width: 120px; height: 120px; position: relative; background: rgba(255,255,255,0.1); border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+    .d-pad-knob { width: 50px; height: 50px; background: rgba(0,255,255,0.5); border-radius: 50%; position: absolute; top: 35px; left: 35px; box-shadow: 0 0 15px #0ff; pointer-events: none; }
+    
+    .btn-group { display: flex; gap: 15px; }
+    .btn { width: 80px; height: 80px; background: rgba(255,255,255,0.1); border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; color: #fff; font-size: 30px; display: flex; justify-content: center; align-items: center; text-shadow: 0 0 5px #fff; active: scale(0.9); transition: transform 0.1s; backdrop-filter: blur(4px); }
+    .btn-atk { border-color: #f55; color: #f55; box-shadow: 0 0 10px #f00; }
+    .btn-jump { border-color: #5f5; color: #5f5; box-shadow: 0 0 10px #0f0; }
 
-        body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #000;
-            touch-action: none;
-            user-select: none;
-            font-family: 'Press Start 2P', monospace;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-        }
+    /* SCREENS */
+    .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; pointer-events: auto; }
+    .hidden { display: none !important; }
+    
+    h1 { color: #0ff; font-size: 32px; text-shadow: 4px 4px #f00; margin-bottom: 20px; text-align: center; line-height: 1.5; }
+    p { font-size: 10px; line-height: 1.6; max-width: 600px; text-align: center; color: #aaa; margin-bottom: 30px; padding: 0 20px; }
+    .start-btn { background: transparent; color: #0ff; border: 4px solid #0ff; padding: 15px 40px; font-family: inherit; font-size: 16px; cursor: pointer; text-transform: uppercase; animation: pulse 1s infinite; }
+    .start-btn:active { background: #0ff; color: #000; }
 
-        canvas { 
-            display: block; 
-            width: 100vw; 
-            height: 100vh;
-            image-rendering: pixelated;
-            image-rendering: crisp-edges;
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        #ui-layer {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            pointer-events: none;
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between;
-            z-index: 10;
-        }
-
-        /* HUD */
-        .hud-panel {
-            padding: 10px 15px;
-            /* Default dark hud, will be hidden in intro via JS if needed, or we keep it */
-            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
-            color: #00ff00;
-            text-shadow: 0 0 4px #00ff00;
-            display: flex; 
-            justify-content: space-between; 
-            align-items: flex-start;
-            font-size: 8px;
-            transition: opacity 1s;
-        }
-
-        .bar-wrap {
-            width: 120px; 
-            height: 10px; 
-            background: #000; 
-            border: 2px solid #00ff00;
-            margin-bottom: 5px; 
-            position: relative; 
-            overflow: hidden;
-        }
-        
-        .hp-fill { 
-            height: 100%; 
-            background: repeating-linear-gradient(
-                90deg,
-                #ff0000 0px,
-                #ff0000 2px,
-                #cc0000 2px,
-                #cc0000 4px
-            );
-            width: 100%; 
-            transition: width 0.15s; 
-        }
-
-        .weapon-display {
-            display: flex; 
-            gap: 6px; 
-            margin-top: 4px; 
-            align-items: center;
-            font-size: 7px; 
-            color: #0ff;
-        }
-
-        /* Controls */
-        .controls-area {
-            height: 220px; 
-            width: 100%;
-            display: flex; 
-            justify-content: space-between;
-            padding: 15px; 
-            box-sizing: border-box;
-            pointer-events: auto;
-            padding-bottom: 30px;
-        }
-
-        .stick-zone { 
-            width: 45%; 
-            height: 100%; 
-            position: relative; 
-        }
-        
-        .stick-base {
-            position: absolute; 
-            width: 100px; 
-            height: 100px;
-            border: 3px solid rgba(0,255,255,0.4);
-            background: rgba(0,0,0,0.5);
-            border-radius: 50%; 
-            display: none; 
-            pointer-events: none;
-            box-shadow: 0 0 25px rgba(0,255,255,0.6);
-        }
-        
-        .stick-knob {
-            position: absolute; 
-            width: 45px; 
-            height: 45px;
-            background: radial-gradient(circle, #0ff, #0aa);
-            border: 3px solid #0ff;
-            border-radius: 50%; 
-            top: 27.5px; 
-            left: 27.5px;
-            pointer-events: none;
-            box-shadow: 0 0 20px #0ff;
-        }
-
-        .btn-zone {
-            width: 50%; 
-            height: 100%;
-            display: flex; 
-            justify-content: flex-end; 
-            align-items: flex-end;
-            gap: 12px;
-        }
-        
-        .action-btn {
-            width: 90px; 
-            height: 90px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.6);
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            color: #fff; 
-            font-size: 32px;
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            box-shadow: 0 0 25px rgba(0,255,255,0.4);
-            font-family: 'Press Start 2P';
-            transition: transform 0.1s;
-        }
-        
-        .action-btn:active { 
-            transform: scale(0.88); 
-            box-shadow: 0 0 35px rgba(0,255,255,0.9); 
-        }
-        
-        #btn-atk { 
-            border-color: #f00; 
-            box-shadow: 0 0 25px rgba(255,0,0,0.6); 
-            margin-bottom: 25px; 
-        }
-        
-        #btn-jump { 
-            border-color: #0f0; 
-            box-shadow: 0 0 25px rgba(0,255,0,0.6); 
-            width: 75px; 
-            height: 75px; 
-            font-size: 24px; 
-        }
-
-        /* Title Screen */
-        .title-screen {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            background: #000;
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center;
-            z-index: 30; 
-            color: #0ff;
-            pointer-events: auto;
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .title-logo {
-            font-size: clamp(32px, 8vw, 48px);
-            color: #0ff;
-            text-shadow: 
-                0 0 10px #0ff,
-                0 0 20px #0ff,
-                4px 4px 0px #f00,
-                8px 8px 0px #000;
-            margin-bottom: 8px;
-            animation: glow 2s ease-in-out infinite;
-            text-align: center;
-            padding: 0 10px;
-        }
-
-        @keyframes glow {
-            0%, 100% { text-shadow: 0 0 10px #0ff, 0 0 20px #0ff, 4px 4px 0px #f00, 8px 8px 0px #000; }
-            50% { text-shadow: 0 0 20px #0ff, 0 0 40px #0ff, 4px 4px 0px #f00, 8px 8px 0px #000; }
-        }
-
-        .chapter-text {
-            font-size: clamp(8px, 2vw, 12px);
-            color: #fa0;
-            letter-spacing: 2px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 5px #fa0;
-            text-align: center;
-            padding: 0 10px;
-        }
-
-        .story-box {
-            max-width: min(90%, 600px);
-            padding: 15px;
-            background: rgba(0,0,0,0.8);
-            border: 3px solid #0ff;
-            box-shadow: 0 0 30px rgba(0,255,255,0.5);
-            margin: 15px;
-            font-size: clamp(7px, 1.8vw, 10px);
-            line-height: 1.6;
-            color: #fff;
-            max-height: 40vh;
-            overflow-y: auto;
-        }
-
-        .lang-section {
-            margin-bottom: 12px;
-        }
-
-        .lang-label {
-            color: #0ff;
-            font-size: clamp(8px, 2vw, 11px);
-            margin-bottom: 6px;
-        }
-
-        .start-btn {
-            margin-top: 20px; 
-            padding: 12px 35px;
-            font-size: clamp(10px, 2.5vw, 14px);
-            font-family: 'Press Start 2P';
-            background: #000; 
-            color: #0ff;
-            border: 3px solid #0ff;
-            cursor: pointer;
-            text-transform: uppercase;
-            box-shadow: 0 0 20px rgba(0,255,255,0.5);
-            animation: blink 1s infinite;
-            touch-action: manipulation;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.6; }
-        }
-
-        .start-btn:active {
-            background: #0ff;
-            color: #000;
-            box-shadow: 0 0 40px rgba(0,255,255,1);
-            transform: scale(0.95);
-        }
-
-        .hidden { display: none !important; }
-
-        .game-over {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            background: rgba(0,0,0,0.95);
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center;
-            z-index: 25; 
-            color: #f00;
-            pointer-events: auto;
-        }
-
-        .game-over h1 {
-            font-size: clamp(28px, 6vw, 42px);
-            text-shadow: 0 0 20px #f00;
-            margin-bottom: 15px;
-        }
-
-        .toast {
-            position: absolute; 
-            top: 30%; 
-            width: 100%; 
-            text-align: center;
-            font-size: clamp(12px, 3vw, 16px);
-            font-weight: bold; 
-            color: #fff; 
-            text-shadow: 0 0 10px #0ff;
-            opacity: 0; 
-            pointer-events: none; 
-            transition: opacity 0.5s;
-            font-family: 'Press Start 2P';
-            z-index: 15;
-        }
-
-        .scanlines {
-            position: fixed;
-            top: 0; 
-            left: 0;
-            width: 100%; 
-            height: 100%;
-            background: repeating-linear-gradient(
-                0deg,
-                rgba(0, 0, 0, 0.1) 0px,
-                rgba(0, 0, 0, 0.1) 1px,
-                transparent 1px,
-                transparent 2px
-            );
-            pointer-events: none;
-            z-index: 50;
-        }
-
-        .copyright {
-            font-size: clamp(6px, 1.5vw, 8px);
-            color: #666;
-            margin-top: 15px;
-            text-align: center;
-        }
-    </style>
+    @keyframes pulse { 0% { box-shadow: 0 0 10px #0ff; } 50% { box-shadow: 0 0 25px #0ff; } 100% { box-shadow: 0 0 10px #0ff; } }
+    
+    .toast { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); color: #fff; font-size: 24px; text-shadow: 0 0 10px #f00; opacity: 0; transition: opacity 0.5s; z-index: 15; pointer-events: none; }
+</style>
 </head>
 <body>
 
-    <audio id="bgm" loop>
-        <source src="theme.mp3" type="audio/mpeg">
-    </audio>
+<audio id="bgm" loop preload="auto">
+    <source src="theme.mp3" type="audio/mpeg">
+</audio>
 
-    <canvas id="gameCanvas"></canvas>
-    <div class="scanlines"></div>
+<canvas id="game"></canvas>
 
-    <div id="ui-layer">
-        <div class="hud-panel" id="hud">
-            <div>
-                <div style="font-size: 7px; color:#0f0; margin-bottom:3px;">█ VITALITY █</div>
-                <div class="bar-wrap"><div id="hp-bar" class="hp-fill"></div></div>
-                <div class="weapon-display">
-                    <span id="weapon-text">SWORD</span>
-                    <span id="ammo-text"></span>
-                </div>
-            </div>
-            <div style="text-align: right;">
-                <div style="font-size: 7px; color: #fa0;">█ DEPTH █</div>
-                <div id="score-disp" style="font-size: clamp(16px, 4vw, 20px); color:#0ff; text-shadow: 0 0 5px #0ff;">0M</div>
-                <div style="font-size: 7px; color: #f44; margin-top: 5px;">█ KILLS █</div>
-                <div id="kill-score" style="font-size: clamp(14px, 3vw, 16px); color:#f44; text-shadow: 0 0 5px #f00;">0</div>
-            </div>
+<div id="ui-layer">
+    <div class="hud" id="hud">
+        <div>
+            <div style="font-size: 8px; color:#0f0; margin-bottom:4px;">VITALITY</div>
+            <div class="bar-frame"><div id="hp-bar" class="hp-fill"></div></div>
         </div>
+        <div class="score-block">
+            <div id="depth-disp" class="big-score">0 M</div>
+            <div style="font-size: 8px; color:#aaa;">DEPTH</div>
+        </div>
+    </div>
+    
+    <div id="toast" class="toast">CRITICAL HIT!</div>
+
+    <div class="controls">
+        <div class="d-pad" id="joystick">
+            <div class="d-pad-knob" id="stick-knob"></div>
+        </div>
+        <div class="btn-group">
+            <div class="btn btn-atk" id="btn-atk">⚔</div>
+            <div class="btn btn-jump" id="btn-jump">↑</div>
+        </div>
+    </div>
+</div>
+
+<div id="start-screen" class="screen">
+    <h1>ER TOSTIK:<br>THE DESCENT</h1>
+    <div style="border: 2px solid #0ff; padding: 15px; margin: 20px; background: rgba(0,20,40,0.8);">
+        <p style="color:#fff;">
+            The Oracle waits across the chasm.<br><br>
+            "To save your brothers, you must descend to the underworld."
+        </p>
+    </div>
+    <button class="start-btn" onclick="initGame()">START JOURNEY</button>
+    <p style="margin-top: 20px; font-size: 8px;">Audio Required • Put theme.mp3 in folder</p>
+</div>
+
+<div id="game-over" class="screen hidden">
+    <h1 style="color: #f00; text-shadow: 4px 4px #500;">YOU DIED</h1>
+    <p id="final-score" style="font-size: 16px; color: #fff;">DEPTH REACHED: 0 M</p>
+    <button class="start-btn" style="border-color: #f00; color: #f00; box-shadow: 0 0 10px #f00;" onclick="resetGame()">TRY AGAIN</button>
+</div>
+
+<script>
+/**
+ * CORE CONFIGURATION
+ */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d', { alpha: false });
+const bgm = document.getElementById('bgm');
+
+let W, H;
+let gameState = 'MENU'; // MENU, INTRO, PLAY, DEAD
+let frame = 0;
+let camY = 0;
+let score = 0;
+let shake = 0;
+
+// Entities
+let player = {};
+let entities = []; // Enemies, items
+let platforms = [];
+let particles = [];
+let walls = [];
+
+// Intro Vars
+let introChasmStart = 0;
+let introOracleX = 0;
+
+// Input State
+const keys = { x: 0, y: 0, jump: false, atk: false };
+
+/**
+ * INITIALIZATION & RESIZE
+ */
+function resize() {
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+    
+    // Intro Layout Calculation
+    introChasmStart = W * 0.6;
+    introOracleX = W * 0.85;
+}
+window.addEventListener('resize', resize);
+resize();
+
+function initGame() {
+    // AUDIO START - Must be triggered by user interaction
+    bgm.volume = 0.6;
+    bgm.play().then(() => {
+        console.log("Audio started successfully");
+    }).catch(e => {
+        console.warn("Audio failed to play (likely browser policy):", e);
+        showToast("Audio Blocked: Tap Screen", "#fa0");
+    });
+
+    document.getElementById('start-screen').classList.add('hidden');
+    document.getElementById('hud').style.opacity = 0; // Hide HUD for intro
+    gameState = 'INTRO';
+    
+    resetPlayer(true);
+    loop();
+}
+
+function resetGame() {
+    document.getElementById('game-over').classList.add('hidden');
+    gameState = 'INTRO'; // Restart from intro or play? Let's do intro for effect
+    resetPlayer(true);
+}
+
+function resetPlayer(isIntro) {
+    player = {
+        x: isIntro ? 50 : W/2,
+        y: isIntro ? H - 200 : 0,
+        w: 24, h: 48,
+        vx: 0, vy: 0,
+        hp: 100, maxHp: 100,
+        grounded: false,
+        wallSlide: false,
+        facing: 1,
+        anim: 'idle', frame: 0,
+        invincible: 0,
+        atkTimer: 0
+    };
+    
+    platforms = [];
+    entities = [];
+    particles = [];
+    walls = [];
+    camY = 0;
+    score = 0;
+
+    if (!isIntro) {
+        // Generate initial shaft if jumping straight to play (debug)
+        genWorld(200, 2000);
+    }
+}
+
+function startGameplay() {
+    gameState = 'PLAY';
+    document.getElementById('hud').style.opacity = 1;
+    
+    // Convert player position to gameplay coordinates
+    // We set player to top of shaft
+    player.x = W/2;
+    player.y = 100;
+    player.vx = 0;
+    player.vy = 10; // Start falling
+    
+    // Initial World Gen
+    platforms.push({x: W/2 - 100, y: 300, w: 200, h: 20, type: 'stone'});
+    genWorld(400, 1500);
+}
+
+/**
+ * WORLD GENERATION
+ */
+function genWorld(startY, endY) {
+    let y = startY;
+    while(y < endY) {
+        y += 80 + Math.random() * 80;
         
-        <div id="toast-msg" class="toast">IMPACT!</div>
-
-        <div class="controls-area">
-            <div class="stick-zone" id="joystick">
-                <div class="stick-base" id="stick-base"><div class="stick-knob" id="stick-knob"></div></div>
-            </div>
-            <div class="btn-zone">
-                <div class="action-btn" id="btn-atk">⚔</div>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div class="action-btn" id="btn-jump">↑</div>
-                    <div class="action-btn" id="btn-down" style="width: 75px; height: 75px; font-size: 24px; border-color: #fa0; box-shadow: 0 0 25px rgba(255,170,0,0.6);">↓</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="start-screen" class="title-screen">
-        <div class="title-logo">ER TOSTIK</div>
-        <div class="chapter-text">▼ DESCENT TO THE UNDERWORLD ▼</div>
+        // Tunnel Logic
+        const sinOff = Math.sin(y * 0.002) * (W * 0.25);
+        const cx = W/2 + sinOff;
+        const width = 280; // Tunnel width
         
-        <div class="story-box">
-            <div class="lang-section">
-                <div class="lang-label">█ ENGLISH █</div>
-                <p>The warrior Er Tostik stands at the edge of the world. Before him lies the eternal abyss of Tamag. An Oracle waits on the other side. You must descend to save your brothers.</p>
-            </div>
+        // Platform
+        if (Math.random() > 0.3) {
+            const pw = 60 + Math.random() * 80;
+            const px = (cx - width/2) + Math.random() * (width - pw);
+            const type = Math.random() < 0.1 ? 'ice' : (Math.random()<0.1 ? 'slime' : 'stone');
+            platforms.push({ x: px, y: y, w: pw, h: 20, type: type });
             
-            <div class="lang-section">
-                <div class="lang-label">█ ҚАЗАҚША █</div>
-                <p>Батыр Ер Төстік дүниенің шетінде тұр. Оның алдында Тамұқтың мәңгілік тұңғиығы жатыр. Арғы жақта сәуегей күтіп тұр. Бауырларыңды құтқару үшін төмен түсуің керек.</p>
-            </div>
-        </div>
-
-        <button class="start-btn" onclick="startGame()">▶ START ◀</button>
-        <div class="copyright">© 2025 ARCADE CLASSICS</div>
-    </div>
-
-    <div id="game-over" class="game-over hidden">
-        <h1>GAME OVER</h1>
-        <p id="final-depth" style="font-size: clamp(18px, 4vw, 24px); color: #0ff; margin: 12px 0;">DEPTH: 0M</p>
-        <button class="start-btn" onclick="startGame()">▶ TRY AGAIN ◀</button>
-    </div>
-
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
-        const bgm = document.getElementById('bgm');
-
-        // ============================================================================
-        // GAME CONFIG & VARIABLES
-        // ============================================================================
-
-        let W, H;
-        let bgStars = [];
-        let clouds = [];
-
-        function resize() {
-            W = window.innerWidth;
-            H = window.innerHeight;
-            
-            canvas.width = W;
-            canvas.height = H;
-            canvas.style.width = W + 'px';
-            canvas.style.height = H + 'px';
-            
-            ctx.imageSmoothingEnabled = false;
-            
-            generateStars();
-            generateClouds();
-        }
-
-        function generateStars() {
-            bgStars = [];
-            for(let i=0; i<60; i++) {
-                bgStars.push({
-                    x: Math.random() * W,
-                    y: Math.random() * H,
-                    s: Math.random() * 2 + 1,
-                    speed: Math.random() * 0.5 + 0.2
+            // Enemy Spawn
+            if (Math.random() < 0.3 && y > 600) {
+                const eTypes = ['bat', 'slime', 'sentinel'];
+                const et = eTypes[Math.floor(Math.random() * eTypes.length)];
+                entities.push({
+                    type: et,
+                    x: px + pw/2,
+                    y: y - 30,
+                    w: 30, h: 30,
+                    vx: et === 'bat' ? 2 : 1,
+                    vy: 0,
+                    hp: 30,
+                    timer: Math.random() * 100
                 });
             }
         }
+    }
+}
 
-        function generateClouds() {
-            clouds = [];
-            for(let i=0; i<10; i++) {
-                clouds.push({
-                    x: Math.random() * W,
-                    y: Math.random() * (H/3),
-                    w: 60 + Math.random() * 80,
-                    h: 20 + Math.random() * 20,
-                    speed: 0.2 + Math.random() * 0.3
-                });
-            }
-        }
+/**
+ * GAME LOOP
+ */
+function loop() {
+    if (gameState === 'DEAD') return;
+    
+    update();
+    draw();
+    
+    frame++;
+    requestAnimationFrame(loop);
+}
 
-        window.addEventListener('resize', resize);
-        window.addEventListener('orientationchange', () => setTimeout(resize, 100));
-        resize();
-
-        // Color Palette
-        const C = {
-            HELMET_DARK: '#2d3561', HELMET_MID: '#4a5a8a', HELMET_LIGHT: '#6b7db5', HELMET_SHINE: '#9fb3ff',
-            GOLD: '#ffd700', GOLD_DARK: '#b8860b',
-            ARMOR_DARK: '#1a4d5c', ARMOR_MID: '#2d7a8f', ARMOR_LIGHT: '#45a8c5',
-            TUNIC_DARK: '#8b0000', TUNIC_MID: '#c41e3a', TUNIC_LIGHT: '#e63946',
-            SCARF_DARK: '#00a8a8', SCARF_MID: '#00d4d4', SCARF_LIGHT: '#00ffff', SCARF_GLOW: '#b0ffff',
-            BELT: '#8b4513', BELT_GOLD: '#ffd700',
-            BOOT_DARK: '#3d2817', BOOT_MID: '#5c4033', BOOT_LIGHT: '#7d5a3d',
-            SKIN_DARK: '#8d6e63', SKIN_MID: '#a1887f', SKIN_LIGHT: '#bcaaa4',
-            BLADE_DARK: '#b0c4de', BLADE_MID: '#d3e5f5', BLADE_LIGHT: '#f0f8ff',
-            HILT_GOLD: '#daa520', HILT_JEWEL: '#ff0000',
-        };
-
-        const SPRITE_SCALE = 2;
-
-        // ============================================================================
-        // SPRITES
-        // ============================================================================
-
-        class WarriorSprite {
-            constructor() {
-                this.sprites = {};
-                this.init();
-            }
-
-            empty() {
-                const s = [];
-                for (let y = 0; y < 32; y++) s[y] = new Array(32).fill(null);
-                return s;
-            }
-
-            base() {
-                const s = this.empty();
-                s[3][15] = C.SCARF_LIGHT; s[3][16] = C.SCARF_MID;
-                s[4][14] = C.SCARF_MID; s[4][15] = C.SCARF_LIGHT; s[4][16] = C.SCARF_MID; s[4][17] = C.SCARF_DARK;
-                s[6][15] = C.HELMET_SHINE; s[6][16] = C.HELMET_LIGHT;
-                s[7][14] = C.HELMET_LIGHT; s[7][15] = C.HELMET_SHINE; s[7][16] = C.HELMET_MID; s[7][17] = C.HELMET_DARK;
-                for (let x = 13; x <= 18; x++) s[8][x] = x <= 15 ? C.HELMET_LIGHT : C.HELMET_MID;
-                for (let x = 12; x <= 19; x++) s[9][x] = x <= 14 ? C.HELMET_LIGHT : x <= 16 ? C.HELMET_MID : C.HELMET_DARK;
-                for (let x = 12; x <= 19; x++) s[10][x] = C.GOLD;
-                s[11][13] = C.HELMET_MID; s[11][14] = C.SKIN_DARK; s[11][15] = C.SKIN_MID; s[11][16] = C.SKIN_MID; s[11][17] = C.SKIN_DARK; s[11][18] = C.HELMET_MID;
-                s[12][13] = C.HELMET_DARK; s[12][14] = C.SKIN_MID; s[12][15] = C.HELMET_DARK; s[12][16] = C.HELMET_DARK; s[12][17] = C.SKIN_MID; s[12][18] = C.HELMET_DARK;
-                s[11][10] = C.SCARF_DARK; s[11][11] = C.SCARF_MID;
-                s[12][9] = C.SCARF_DARK; s[12][10] = C.SCARF_LIGHT; s[12][11] = C.SCARF_MID;
-                s[13][8] = C.SCARF_MID; s[13][9] = C.SCARF_LIGHT; s[13][10] = C.SCARF_GLOW;
-                s[11][20] = C.SCARF_MID; s[11][21] = C.SCARF_DARK;
-                s[12][20] = C.SCARF_MID; s[12][21] = C.SCARF_LIGHT; s[12][22] = C.SCARF_DARK;
-                s[13][21] = C.SCARF_LIGHT; s[13][22] = C.SCARF_GLOW; s[13][23] = C.SCARF_MID;
-                s[13][12] = C.ARMOR_DARK; s[13][13] = C.ARMOR_MID;
-                s[14][11] = C.ARMOR_DARK; s[14][12] = C.ARMOR_LIGHT; s[14][13] = C.ARMOR_MID;
-                s[13][18] = C.ARMOR_MID; s[13][19] = C.ARMOR_DARK;
-                s[14][18] = C.ARMOR_MID; s[14][19] = C.ARMOR_LIGHT; s[14][20] = C.ARMOR_DARK;
-                for (let y = 13; y <= 18; y++) {
-                    for (let x = 14; x <= 17; x++) {
-                        s[y][x] = (y % 2 === 0) ? ((x % 2 === 0) ? C.ARMOR_LIGHT : C.ARMOR_MID) : C.ARMOR_DARK;
-                    }
-                }
-                s[15][15] = C.GOLD; s[15][16] = C.GOLD;
-                for (let x = 13; x <= 18; x++) s[19][x] = C.BELT;
-                s[19][15] = C.BELT_GOLD; s[19][16] = C.BELT_GOLD;
-                s[17][13] = C.TUNIC_DARK; s[17][18] = C.TUNIC_DARK;
-                s[18][13] = C.TUNIC_DARK; s[18][18] = C.TUNIC_DARK;
-                for (let y = 20; y <= 25; y++) {
-                    s[y][14] = y <= 22 ? C.ARMOR_LIGHT : C.TUNIC_LIGHT;
-                    s[y][15] = y <= 22 ? C.ARMOR_MID : C.TUNIC_MID;
-                    s[y][16] = y <= 22 ? C.ARMOR_MID : C.TUNIC_MID;
-                    s[y][17] = y <= 22 ? C.ARMOR_LIGHT : C.TUNIC_LIGHT;
-                }
-                for (let y = 26; y <= 29; y++) {
-                    s[y][14] = C.BOOT_DARK; s[y][15] = C.BOOT_MID;
-                    s[y][16] = C.BOOT_MID; s[y][17] = C.BOOT_DARK;
-                }
-                s[29][15] = C.BOOT_LIGHT; s[29][16] = C.BOOT_LIGHT;
-                s[16][19] = C.HILT_GOLD; s[17][19] = C.HILT_GOLD;
-                for (let y = 19; y <= 24; y++) s[y][19] = C.BLADE_DARK;
-                s[16][11] = C.ARMOR_MID; s[17][11] = C.TUNIC_MID; s[18][11] = C.SKIN_MID;
-                s[19][11] = C.SKIN_DARK; s[20][11] = C.BOOT_DARK;
-                return s;
-            }
-
-            walk1() {
-                const s = this.base();
-                for (let y = 20; y <= 29; y++) {
-                    const shift = Math.floor((29 - y) / 3);
-                    if (s[y][14]) s[y - 2][13 - shift] = s[y][14];
-                    if (s[y][15]) s[y - 2][14 - shift] = s[y][15];
-                    s[y][14] = null; s[y][15] = null;
-                }
-                for (let y = 20; y <= 29; y++) {
-                    const shift = Math.floor((y - 20) / 3);
-                    if (s[y][16]) s[y + 1][17 + shift] = s[y][16];
-                    if (s[y][17]) s[y + 1][18 + shift] = s[y][17];
-                    s[y][16] = null; s[y][17] = null;
-                }
-                s[14][7] = C.SCARF_DARK; s[14][8] = C.SCARF_MID;
-                return s;
-            }
-
-            walk2() {
-                const s = this.base();
-                for (let y = 20; y <= 29; y++) {
-                    const shift = Math.floor((29 - y) / 3);
-                    if (s[y][16]) s[y - 2][18 + shift] = s[y][16];
-                    if (s[y][17]) s[y - 2][19 + shift] = s[y][17];
-                    s[y][16] = null; s[y][17] = null;
-                }
-                for (let y = 20; y <= 29; y++) {
-                    const shift = Math.floor((y - 20) / 3);
-                    if (s[y][14]) s[y + 1][12 - shift] = s[y][14];
-                    if (s[y][15]) s[y + 1][13 - shift] = s[y][15];
-                    s[y][14] = null; s[y][15] = null;
-                }
-                s[14][24] = C.SCARF_MID; s[14][25] = C.SCARF_DARK;
-                return s;
-            }
-
-            jump() {
-                const s = this.empty();
-                const b = this.base();
-                for (let y = 3; y <= 18; y++) {
-                    for (let x = 0; x < 32; x++) s[y - 2][x] = b[y][x];
-                }
-                for (let y = 18; y <= 23; y++) {
-                    s[y][13] = C.ARMOR_LIGHT; s[y][14] = C.ARMOR_MID;
-                    s[y][17] = C.ARMOR_MID; s[y][18] = C.ARMOR_LIGHT;
-                }
-                s[24][13] = C.BOOT_MID; s[24][14] = C.BOOT_DARK;
-                s[24][17] = C.BOOT_DARK; s[24][18] = C.BOOT_MID;
-                for (let y = 10; y >= 4; y--) {
-                    s[y][15] = C.SCARF_LIGHT; s[y][16] = C.SCARF_MID;
-                }
-                return s;
-            }
-
-            fall() {
-                const s = this.empty();
-                const b = this.base();
-                for (let y = 3; y <= 18; y++) {
-                    for (let x = 0; x < 32; x++) s[y][x] = b[y][x];
-                }
-                for (let y = 19; y <= 28; y++) {
-                    s[y][14] = (y >= 25) ? C.BOOT_MID : C.TUNIC_LIGHT;
-                    s[y][17] = (y >= 25) ? C.BOOT_MID : C.TUNIC_LIGHT;
-                }
-                for (let y = 11; y >= 1; y--) {
-                    s[y][15] = C.SCARF_LIGHT; s[y][16] = C.SCARF_MID;
-                }
-                return s;
-            }
-
-            climb() {
-                const s = this.base();
-                for (let y = 20; y <= 25; y++) {
-                    s[y - 3][14] = s[y][14];
-                    s[y][14] = null;
-                }
-                for (let y = 20; y <= 25; y++) {
-                    s[y + 2][17] = s[y][17];
-                    s[y][17] = null;
-                }
-                s[14][10] = C.ARMOR_LIGHT; s[15][9] = C.SKIN_MID;
-                return s;
-            }
-
-            attack() {
-                const s = this.base();
-                for (let y = 16; y <= 24; y++) s[y][19] = null;
-                s[15][20] = C.HILT_GOLD; s[16][20] = C.HILT_GOLD;
-                for (let x = 21; x <= 27; x++) {
-                    s[15][x] = C.BLADE_LIGHT;
-                    s[16][x] = C.BLADE_DARK;
-                }
-                return s;
-            }
-
-            init() {
-                this.sprites = {
-                    idle: [this.base()],
-                    walk: [this.walk1(), this.walk2()],
-                    run: [this.walk1(), this.walk2()],
-                    jump: [this.jump()],
-                    fall: [this.fall()],
-                    climb: [this.climb()],
-                    attack: [this.attack()]
-                };
-            }
-
-            draw(ctx, anim, frame, x, y, facing, invincible, flashFrame) {
-                const sprites = this.sprites[anim] || this.sprites.idle;
-                const sprite = sprites[frame % sprites.length];
-                
-                if (invincible && flashFrame) return;
-                
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.scale(facing * SPRITE_SCALE, SPRITE_SCALE);
-                
-                for (let py = 0; py < 32; py++) {
-                    for (let px = 0; px < 32; px++) {
-                        const color = sprite[py][px];
-                        if (color) {
-                            ctx.fillStyle = color;
-                            ctx.fillRect(px - 16, py - 16, 1, 1);
-                        }
-                    }
-                }
-                ctx.restore();
-            }
-        }
-
-        const warrior = new WarriorSprite();
-
-        // ORACLE SPRITE (Simple shape for intro)
-        function drawOracle(ctx, x, y) {
-            ctx.save();
-            ctx.translate(x, y);
-            const scale = 5; // 3x taller than normal = HUGE
-            
-            // Cloak Body
-            ctx.fillStyle = '#111';
-            ctx.beginPath();
-            ctx.moveTo(0, -60);
-            ctx.quadraticCurveTo(20, -60, 30, 0);
-            ctx.lineTo(-30, 0);
-            ctx.quadraticCurveTo(-20, -60, 0, -60);
-            ctx.fill();
-
-            // Hood
-            ctx.fillStyle = '#222';
-            ctx.beginPath();
-            ctx.arc(0, -50, 15, Math.PI, 0);
-            ctx.lineTo(15, -40);
-            ctx.lineTo(-15, -40);
-            ctx.fill();
-
-            // Glowing Eyes (Mysterious)
-            ctx.fillStyle = '#0ff';
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = '#0ff';
-            ctx.fillRect(-5, -52, 2, 2);
-            ctx.fillRect(3, -52, 2, 2);
-            ctx.shadowBlur = 0;
-
-            ctx.restore();
-        }
-
-        // ============================================================================
-        // GAME STATE
-        // ============================================================================
-
-        const GRAVITY = 0.5;
-        const FRICTION_STONE = 0.85;
-        const FRICTION_ICE = 0.98;
-        const WALL_GAP = 300;
-        const FALL_DMG_THRESHOLD = 450;
+function update() {
+    // --- INTRO LOGIC ---
+    if (gameState === 'INTRO') {
+        // Physics
+        player.vx = keys.x * 4;
+        player.vy += 0.5; // Gravity
+        player.x += player.vx;
+        player.y += player.vy;
         
-        // Game Modes: INTRO, PLAYING, GAMEOVER
-        let gameState = 'INTRO';
-        let camY = 0, score = 0, killCount = 0, frame = 0, shake = 0;
-        let inputs = { x: 0, y: 0, jump: false, atk: false, down: false, activeStick: false, downTime: 0 };
-
-        let player = {
-            x: 0, y: 0, w: 20, h: 55,
-            vx: 0, vy: 0, hp: 100, maxHp: 100,
-            facing: 1, aimAngle: 0,
-            grounded: false, wallSliding: false,
-            fallStartY: 0,
-            animState: 'idle', animFrame: 0, animTimer: 0,
-            invincible: 0,
-            weapon: 'sword', arrows: 0,
-            atkCooldown: 0, friction: FRICTION_STONE
-        };
-
-        // Entities
-        let platforms = [], particles = [], enemies = [], items = [], projectiles = [], arrows = [];
+        // Ground Collision (with Chasm)
+        const groundY = H - 150;
+        let onGround = false;
         
-        // Intro Specifics
-        let introChasmX = 0;
-        let introOracleX = 0;
-        let introGroundY = 0;
-
-        // ============================================================================
-        // CONTROLS
-        // ============================================================================
-        // (Input handling code mostly unchanged, just ensured it works globally)
-        const stickZone = document.getElementById('joystick');
-        const stickBase = document.getElementById('stick-base');
-        const stickKnob = document.getElementById('stick-knob');
-        let touchId = null, startX, startY;
-
-        stickZone.addEventListener('touchstart', e => {
-            e.preventDefault();
-            const t = e.changedTouches[0];
-            touchId = t.identifier;
-            startX = t.clientX; startY = t.clientY;
-            const rect = stickZone.getBoundingClientRect();
-            stickBase.style.display = 'block';
-            stickBase.style.left = (startX - rect.left - 50) + 'px';
-            stickBase.style.top = (startY - rect.top - 50) + 'px';
-            stickKnob.style.transform = 'translate(0px, 0px)';
-            inputs.activeStick = true;
-        }, {passive: false});
-
-        stickZone.addEventListener('touchmove', e => {
-            e.preventDefault();
-            for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === touchId) {
-                    const t = e.changedTouches[i];
-                    let dx = t.clientX - startX;
-                    let dy = t.clientY - startY;
-                    const dist = Math.hypot(dx, dy);
-                    const max = 50;
-                    if(dist > max) { 
-                        dx = (dx/dist)*max; 
-                        dy = (dy/dist)*max; 
-                    }
-                    stickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
-                    inputs.x = dx / max; 
-                    inputs.y = dy / max;
-                }
+        if (player.y + player.h > groundY && player.vy >= 0) {
+            // Check if over chasm
+            if (player.x < introChasmStart || player.x > introChasmStart + 200) {
+                player.y = groundY - player.h;
+                player.vy = 0;
+                player.grounded = true;
+                onGround = true;
             }
-        }, {passive: false});
-
-        const resetStick = () => { 
-            touchId = null; inputs.x = 0; inputs.y = 0; 
-            stickBase.style.display = 'none'; inputs.activeStick = false; 
-        };
-        stickZone.addEventListener('touchend', resetStick);
-        stickZone.addEventListener('touchcancel', resetStick);
-
-        const bindBtn = (id, key) => {
-            const el = document.getElementById(id);
-            el.addEventListener('touchstart', e => { 
-                e.preventDefault(); inputs[key] = true; 
-                if (key === 'down' && player.grounded) {
-                    player.y += 30; player.grounded = false; player.vy = 5;
-                }
-            });
-            el.addEventListener('touchend', e => { e.preventDefault(); inputs[key] = false; });
-        };
-        bindBtn('btn-jump', 'jump');
-        bindBtn('btn-atk', 'atk');
-        bindBtn('btn-down', 'down');
-
-        // ============================================================================
-        // LOGIC
-        // ============================================================================
-
-        function startGame() {
-            // Audio Playback
-            bgm.volume = 0.5;
-            bgm.play().catch(e => console.log("Audio requires interaction"));
-
-            document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('game-over').classList.add('hidden');
-            document.getElementById('hud').style.opacity = 0; // Hide HUD initially
-
-            // Setup Intro State
-            gameState = 'INTRO';
-            
-            // Intro Level Layout
-            introGroundY = H - 150;
-            introChasmX = W * 0.6; // Pit starts at 60% screen width
-            introOracleX = W * 0.85; // Oracle on the other side
-
-            // Player Init
-            player.x = 100;
-            player.y = introGroundY - 60;
-            player.vx = 0; 
-            player.vy = 0;
-            player.hp = 100;
-            player.weapon = 'sword';
-            player.arrows = 0;
-            player.grounded = true;
-            player.facing = 1;
-
-            camY = 0;
-            score = 0;
-            killCount = 0;
-            frame = 0;
-            
-            // Clear entities
-            platforms = []; items = []; particles = []; enemies = []; projectiles = []; arrows = [];
-
-            // Start Loop
-            requestAnimationFrame(loop);
         }
-        window.startGame = startGame; // Export
+        if (!onGround) player.grounded = false;
 
-        function startDescent() {
-            gameState = 'PLAYING';
-            document.getElementById('hud').style.opacity = 1;
-            
-            // Reset vertical position context for the endless descent
-            // We shift the player's coordinate space so Y=0 is top of the descent
-            player.y = 100;
-            player.x = W/2;
-            camY = 0;
-            player.fallStartY = 0;
-
-            // Generate initial world
-            platforms = [];
-            platforms.push({x: W/2-100, y: 300, w: 200, h: 20, type:'stone'});
-            genWorld(350, 2000);
+        // Jump
+        if (keys.jump && player.grounded) {
+            player.vy = -10;
+            player.grounded = false;
         }
 
-        function genWorld(sy, ey) {
-            // Function from original code (unchanged logic, just re-adding)
-            let y = sy;
-            while(y < ey) {
-                y += 90 + Math.random() * 80;
-                const offset = Math.sin(y * 0.002) * (W * 0.25);
-                const tunnelCenter = (W/2) + offset;
-                const w = 80 + Math.random() * 100;
-                const minX = tunnelCenter - (WALL_GAP/2) + 20;
-                const maxX = tunnelCenter + (WALL_GAP/2) - w - 20;
-                const x = minX + Math.random() * (maxX - minX);
+        // Animation
+        if (Math.abs(player.vx) > 0.1) { player.facing = Math.sign(player.vx); player.anim = 'run'; }
+        else player.anim = 'idle';
+        if (!player.grounded) player.anim = 'jump';
+
+        // TRANSITION TO GAMEPLAY
+        if (player.y > H + 50) {
+            startGameplay();
+        }
+        return;
+    }
+
+    // --- GAMEPLAY LOGIC ---
+    // Player Physics
+    player.vy += 0.5; // Gravity
+    player.vx += keys.x * 0.5; // Acceleration
+    player.vx *= player.grounded ? 0.8 : 0.95; // Friction
+
+    // Terminal Velocity
+    if (player.vy > 15) player.vy = 15;
+
+    player.x += player.vx;
+    player.y += player.vy;
+
+    // Wall Collision (Tunnel Walls)
+    const sinOff = Math.sin(player.y * 0.002) * (W * 0.25);
+    const cx = W/2 + sinOff;
+    const tunnelW = 300;
+    const wallL = cx - tunnelW/2;
+    const wallR = cx + tunnelW/2;
+    
+    player.wallSlide = false;
+    
+    if (player.x < wallL + 10) {
+        player.x = wallL + 10;
+        player.vx = 0;
+        if (player.vy > 0) { player.wallSlide = true; player.vy *= 0.7; }
+    }
+    if (player.x + player.w > wallR - 10) {
+        player.x = wallR - 10 - player.w;
+        player.vx = 0;
+        if (player.vy > 0) { player.wallSlide = true; player.vy *= 0.7; }
+    }
+
+    // Platform Collision
+    player.grounded = false;
+    if (player.vy > 0) {
+        platforms.forEach(p => {
+            if (player.x + player.w > p.x && player.x < p.x + p.w &&
+                player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + player.vy + 2) {
                 
-                let pType = 'stone';
-                if (Math.random() < 0.2) pType = 'ice';
-                else if (Math.random() < 0.15) pType = 'slime';
-
-                platforms.push({x, y, w, h: 25, type: pType});
-
-                // Spawn Enemies
-                if (Math.random() < 0.5 && y > 500) {
-                    let type = 'crawler';
-                    // ... Enemy spawn probabilities ...
-                    if (y > 800 && Math.random() > 0.7) type = 'bat';
-                    if (y > 1200 && Math.random() > 0.8) type = 'slime';
-                    if (y > 1500 && Math.random() > 0.85) type = 'sentinel';
-                    if (y > 2500 && Math.random() > 0.92) type = 'amalgam';
-
-                    // Simplified enemy push for brevity (same logic as before)
-                    // We need minimal enemy logic here to avoid code bloat, assumes Update() handles them
-                     enemies.push({
-                        type, x: x + w/2, y: y - 30,
-                        w: type === 'amalgam' ? 56 : 30, h: type === 'amalgam' ? 72 : 30,
-                        vx: type === 'sentinel' ? 0 : (Math.random() > 0.5 ? 1 : -1),
-                        hp: type === 'amalgam' ? 120 : 30, maxHp: type === 'amalgam' ? 120 : 30,
-                        patrol: [x, x+w], timer: 0
-                    });
-                }
-            }
-        }
-
-        function update(dt) {
-            frame++;
-
-            // Global Input Mapping
-            if (inputs.activeStick && (Math.abs(inputs.x) > 0.1 || Math.abs(inputs.y) > 0.1)) {
-                player.aimAngle = Math.atan2(inputs.y, inputs.x);
-                if (inputs.x !== 0) player.facing = Math.sign(inputs.x);
-            } else {
-                player.aimAngle = (player.facing === 1) ? 0 : Math.PI;
-            }
-
-            // --- INTRO STATE LOGIC ---
-            if (gameState === 'INTRO') {
-                // Physics
-                player.vx = inputs.x * 5;
-                player.vy += GRAVITY;
-                player.x += player.vx;
-                player.y += player.vy;
-                player.vx *= 0.8; // Ground friction
-
-                // Ground Collision (with Gap)
-                const groundLevel = introGroundY;
-                const gapStart = introChasmX;
-                const gapEnd = introChasmX + 200; // 200px wide gap
-
-                // If player is NOT over the gap, collide with ground
-                let onGround = false;
-                if (player.y + player.h/2 >= groundLevel && player.vy >= 0) {
-                    if (player.x < gapStart || player.x > gapEnd) {
-                        player.y = groundLevel - player.h/2;
-                        player.vy = 0;
-                        player.grounded = true;
-                        onGround = true;
-                    }
-                }
-
-                if (!onGround) player.grounded = false;
-
-                // Jump
-                if (inputs.jump && player.grounded) {
-                    player.vy = -12;
-                    player.grounded = false;
-                }
-
-                // Animation
-                if (!player.grounded) player.animState = player.vy < 0 ? 'jump' : 'fall';
-                else if (Math.abs(inputs.x) > 0.1) player.animState = 'walk';
-                else player.animState = 'idle';
-
-                player.animTimer++;
-                if (player.animTimer > 6) { player.animTimer = 0; player.animFrame++; }
-
-                // TRIGGER DESCENT
-                // If player falls deep enough into the gap
-                if (player.y > H + 100) {
-                    startDescent();
-                }
-                return;
-            }
-
-            // --- PLAYING STATE LOGIC (Original Game Loop) ---
-            if (gameState === 'PLAYING') {
-                // (Reusing the exact update logic from previous code block effectively)
-                // Physics
-                player.vx = inputs.x * 5.5;
-                player.vy += GRAVITY;
-                if (player.vy < 0) player.fallStartY = player.y;
-
-                player.x += player.vx;
-                player.y += player.vy;
-                player.vx *= player.friction;
-
-                // Wall Slide
-                const off = Math.sin(player.y * 0.002) * (W * 0.25);
-                const leftWall = (W/2) + off - (WALL_GAP/2);
-                const rightWall = (W/2) + off + (WALL_GAP/2);
-                player.wallSliding = false;
-
-                if(player.x < leftWall + 10) { 
-                    player.x = leftWall + 10; player.vx = 0; 
-                    if(player.vy > 0) { player.vy *= 0.8; player.fallStartY = player.y; player.wallSliding = true; player.facing=1;}
-                }
-                if(player.x > rightWall - 10) { 
-                    player.x = rightWall - 10; player.vx = 0; 
-                    if(player.vy > 0) { player.vy *= 0.8; player.fallStartY = player.y; player.wallSliding = true; player.facing=-1;}
-                }
-
-                // Animation
-                if (player.animState !== 'attack') {
-                    if (player.wallSliding) player.animState = 'climb';
-                    else if (!player.grounded) player.animState = player.vy < 0 ? 'jump' : 'fall';
-                    else if (Math.abs(inputs.x) > 0.1) player.animState = 'walk';
-                    else player.animState = 'idle';
-                }
-                player.animTimer++;
-                if (player.animTimer > 6) { player.animTimer = 0; player.animFrame++; }
-
-                // Actions
-                if(inputs.jump) {
-                    if(player.grounded) { player.vy = -12.5; player.grounded=false; player.fallStartY=player.y; spawnParticles(player.x, player.y+20, '#888', 8); }
-                    else if(player.wallSliding) { player.vy = -12.5; player.vx = player.facing===1?10:-10; player.wallSliding=false; }
-                }
-
-                if(inputs.atk && player.atkCooldown <= 0) {
-                    player.atkCooldown = 15;
-                    player.animState = 'attack';
-                    player.animFrame = 0;
-                    spawnSlashVisual(player.x + Math.cos(player.aimAngle)*30, player.y + Math.sin(player.aimAngle)*30, player.aimAngle);
-                    
-                    // Hit detection logic (Simplified from prev)
-                    enemies.forEach(e => {
-                        if(Math.hypot(player.x - e.x, player.y - e.y) < 60) {
-                            e.hp -= 25; spawnParticles(e.x, e.y, '#f00', 8); shake = 5;
-                        }
-                    });
-                }
-                if(player.atkCooldown>0) player.atkCooldown--;
-                if(player.invincible>0) player.invincible--;
-
-                // Platforms
-                const wasGrounded = player.grounded;
-                player.grounded = false;
-                player.friction = FRICTION_STONE;
-
-                if(player.vy > 0) {
-                    platforms.forEach(p => {
-                        if(player.x > p.x && player.x < p.x + p.w &&
-                           player.y + player.h/2 >= p.y &&
-                           player.y + player.h/2 <= p.y + p.h + player.vy) {
-                            
-                            if (!wasGrounded && (player.y - player.fallStartY > FALL_DMG_THRESHOLD)) {
-                                player.hp -= 10; shake = 10; showToast("CRASH!", "#f00");
-                            }
-                            player.fallStartY = player.y;
-
-                            if (p.type === 'ice') player.friction = FRICTION_ICE;
-                            if (p.type === 'slime') { player.vy = -15; }
-                            else { player.grounded = true; player.vy = 0; player.y = p.y - player.h/2; }
-                        }
-                    });
-                } else { player.fallStartY = player.y; }
-
-                // Camera & Generation
-                const targetY = player.y - H * 0.4;
-                if(targetY > camY) camY = targetY;
-                if(player.y > score) score = player.y;
-
-                if(platforms[platforms.length-1].y < camY + H * 1.5) genWorld(platforms[platforms.length-1].y, platforms[platforms.length-1].y + 1000);
-                if(platforms[0].y < camY - 200) platforms.shift();
-
-                // Entity cleanup & update (simplified)
-                items = items.filter(i => i.y > camY - 200 && i.y < camY + H + 200);
-                enemies = enemies.filter(e => e.y > camY - 200);
+                player.y = p.y - player.h;
+                player.vy = 0;
+                player.grounded = true;
                 
-                // Enemy Logic (Basic)
-                enemies.forEach((e, i) => {
-                    if(e.hp<=0) { enemies.splice(i,1); killCount++; return; }
-                    // Update physics... (simplified for brevity, assume similar to before)
-                });
-                
-                // Death
-                if(player.hp <= 0) {
-                    gameState = 'GAMEOVER';
-                    document.getElementById('game-over').classList.remove('hidden');
-                    document.getElementById('final-depth').innerText = `DEPTH: ${Math.floor(score/10)}M`;
-                }
-                
-                updateUI();
-                if(shake>0) shake *= 0.9;
+                if (p.type === 'slime') { player.vy = -15; spawnParticles(player.x, player.y+40, '#0f0', 5); }
+                if (p.type === 'ice') player.vx *= 1.02; // Slippery
             }
+        });
+    }
+
+    // Jump
+    if (keys.jump) {
+        if (player.grounded) {
+            player.vy = -12;
+            spawnParticles(player.x, player.y+40, '#fff', 5);
+        } else if (player.wallSlide) {
+            player.vy = -10;
+            player.vx = (player.x < W/2) ? 8 : -8; // Wall jump
+            player.wallSlide = false;
         }
+    }
 
-        // ============================================================================
-        // RENDER
-        // ============================================================================
-
-        function draw() {
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0,0,W,H);
-
-            if (gameState === 'INTRO') {
-                drawIntro();
-            } else if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
-                drawGame();
+    // Attack
+    if (keys.atk && player.atkTimer <= 0) {
+        player.atkTimer = 20;
+        player.anim = 'atk';
+        spawnParticles(player.x + (player.facing*30), player.y + 20, '#fff', 3); // Slash fx
+        
+        // Hitbox
+        const atkX = player.x + (player.facing === 1 ? player.w : -40);
+        entities.forEach(e => {
+            if (Math.abs(e.x - atkX) < 40 && Math.abs(e.y - player.y) < 40) {
+                e.hp -= 20;
+                e.vx = player.facing * 5;
+                spawnParticles(e.x, e.y, '#f00', 8);
+                shake = 5;
+                showToast("HIT!", "#fff");
             }
-        }
+        });
+    }
+    if (player.atkTimer > 0) player.atkTimer--;
 
-        function drawIntro() {
-            // Sky
-            const skyGrad = ctx.createLinearGradient(0, 0, 0, H);
-            skyGrad.addColorStop(0, '#87CEEB'); // Sky blue
-            skyGrad.addColorStop(1, '#E0F7FA');
-            ctx.fillStyle = skyGrad;
-            ctx.fillRect(0, 0, W, H);
+    // Camera
+    const targetCamY = player.y - H * 0.4;
+    if (targetCamY > camY) camY = targetCamY;
+    
+    // Score
+    if (player.y > score) score = player.y;
 
-            // Clouds
-            ctx.fillStyle = 'rgba(255,255,255,0.8)';
-            clouds.forEach(c => {
-                c.x -= c.speed;
-                if(c.x < -100) c.x = W + 100;
-                ctx.fillRect(c.x, c.y, c.w, c.h);
-            });
+    // Clean up
+    if (platforms.length > 0 && platforms[0].y < camY - 100) platforms.shift();
+    
+    // Gen more world
+    const lastP = platforms[platforms.length-1];
+    if (lastP && lastP.y < camY + H + 500) {
+        genWorld(lastP.y, lastP.y + 1000);
+    }
 
-            // Mountains (Background)
-            ctx.fillStyle = '#9FA8DA';
-            ctx.beginPath();
-            ctx.moveTo(0, H);
-            ctx.lineTo(W*0.2, H-200);
-            ctx.lineTo(W*0.5, H);
-            ctx.fill();
-            
-            ctx.fillStyle = '#7986CB';
-            ctx.beginPath();
-            ctx.moveTo(W*0.4, H);
-            ctx.lineTo(W*0.7, H-150);
-            ctx.lineTo(W, H);
-            ctx.fill();
-
-            // Steppe Ground (Green)
-            const gY = introGroundY;
-            const gapS = introChasmX;
-            const gapE = introChasmX + 200;
-
-            ctx.fillStyle = '#4CBB17'; // Kelly Green
-            ctx.fillRect(0, gY, gapS, H-gY); // Left side
-            ctx.fillRect(gapE, gY, W-gapE, H-gY); // Right side
-
-            // Cliff Edges
-            ctx.fillStyle = '#5D4037'; // Dirt/Rock
-            ctx.fillRect(gapS-10, gY, 10, H-gY);
-            ctx.fillRect(gapE, gY, 10, H-gY);
-
-            // The Pit (Black Gradient)
-            const pitGrad = ctx.createLinearGradient(0, gY, 0, H);
-            pitGrad.addColorStop(0, 'rgba(0,0,0,0)');
-            pitGrad.addColorStop(1, '#000');
-            ctx.fillStyle = pitGrad;
-            ctx.fillRect(gapS, gY, 200, H-gY);
-
-            // Draw Oracle (Right Side)
-            drawOracle(ctx, introOracleX, gY);
-
-            // Text Blob
-            const bubbleX = introOracleX - 150;
-            const bubbleY = gY - 140;
-            const bubbleW = 200;
-            const bubbleH = 60;
-            
-            // Bubble Tail
-            ctx.fillStyle = '#fff';
-            ctx.beginPath();
-            ctx.moveTo(introOracleX - 10, gY - 80);
-            ctx.lineTo(introOracleX, gY - 50);
-            ctx.lineTo(introOracleX + 10, gY - 80);
-            ctx.fill();
-
-            // Bubble Body
-            ctx.fillRect(bubbleX, bubbleY, bubbleW, bubbleH);
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bubbleX, bubbleY, bubbleW, bubbleH);
-
-            // Text
-            ctx.fillStyle = '#000';
-            ctx.font = '8px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            ctx.fillText("TO SAVE YOUR BROTHERS", bubbleX + bubbleW/2, bubbleY + 20);
-            ctx.fillText("YOU MUST DESCEND...", bubbleX + bubbleW/2, bubbleY + 40);
-
-            // Tutorial Hint
-            ctx.fillStyle = '#fff';
-            ctx.textAlign = 'left';
-            ctx.fillText("← WALK INTO THE ABYSS", 20, H-20);
-
-            // Draw Player
-            const flashFrame = (frame % 4 === 0);
-            warrior.draw(ctx, player.animState, player.animFrame, player.x, player.y, player.facing, false, flashFrame);
-        }
-
-        function drawGame() {
-            // (Reusing the complex render logic from previous block, simplified slightly for space)
-            
-            // BACKGROUND
-            const depthFactor = Math.min(1, score / 5000);
-            let bgR = Math.floor(101 * (1-depthFactor));
-            let bgG = Math.floor(67 * (1-depthFactor));
-            let bgB = Math.floor(33 * (1-depthFactor));
-            const gradient = ctx.createLinearGradient(0, 0, 0, H);
-            gradient.addColorStop(0, `rgb(${bgR}, ${bgG}, ${bgB})`);
-            gradient.addColorStop(1, '#111');
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, W, H);
-
-            ctx.save();
-            ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake - camY);
-
-            // WALLS
-            for(let y = Math.floor(camY/20)*20; y < camY+H+50; y+=20) {
-                const off = Math.sin(y * 0.002) * (W * 0.25);
-                const cx = (W/2) + off;
-                ctx.fillStyle = '#443333';
-                ctx.fillRect(0, y, cx - WALL_GAP/2, 22);
-                ctx.fillRect(cx + WALL_GAP/2, y, W, 22);
-            }
-
-            // ENTITIES
-            platforms.forEach(p => drawPlatform(ctx, p));
-            
-            // Simple Enemy Draw (Replaced detailed class for brevity in this specific snippet, assume previous EnemySprites class exists)
-            // Note: If you paste this, ensure the EnemySprites class from previous answer is included.
-            // For now, drawing simple boxes for enemies to ensure code runs without dependency
-            enemies.forEach(e => {
-                ctx.fillStyle = e.type==='crawler'?'#f00':e.type==='slime'?'#0f0':'#f0f';
-                ctx.fillRect(e.x - e.w/2, e.y - e.h/2, e.w, e.h);
-            });
-
-            items.forEach(it => {
-                ctx.fillStyle = '#ff0'; ctx.fillRect(it.x-4, it.y-4, 8, 8);
-            });
-
-            // Particles
-            particles.forEach(p => {
-                ctx.fillStyle = p.c || '#fff'; ctx.fillRect(p.x, p.y, 3, 3);
-            });
-
-            // Player
-            warrior.draw(ctx, player.animState, player.animFrame, player.x, player.y, player.facing, player.invincible > 0, frame%4===0);
-            
-            ctx.restore();
-
-            // Vignette
-            const rad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, H*0.9);
-            rad.addColorStop(0, "transparent");
-            rad.addColorStop(1, "rgba(0,0,0,0.8)");
-            ctx.fillStyle = rad;
-            ctx.fillRect(0, 0, W, H);
-        }
-
-        // Helper functions
-        function drawPlatform(ctx, p) {
-            ctx.fillStyle = p.type === 'ice' ? '#aaf' : p.type==='slime'?'#484':'#654';
-            ctx.fillRect(p.x, p.y, p.w, p.h);
-            ctx.fillStyle = 'rgba(0,0,0,0.3)';
-            ctx.fillRect(p.x, p.y+p.h-4, p.w, 4);
-        }
-
-        function spawnSlashVisual(x, y, angle) {
-            particles.push({x, y, type:'slash', life:10, angle});
+    // Update Entities
+    entities.forEach((e, i) => {
+        // AI
+        if (e.type === 'bat') {
+            e.y += Math.sin(frame * 0.1) * 2;
+            e.x += e.vx;
+            if (e.x < wallL || e.x > wallR) e.vx *= -1;
+        } else {
+            e.x += e.vx;
+            if (Math.random() < 0.02) e.vx *= -1;
         }
         
-        function spawnParticles(x, y, c, n) {
-            for(let i=0; i<n; i++) particles.push({x, y, vx:(Math.random()-0.5)*5, vy:(Math.random()-0.5)*5, life:20, c});
+        // Collision with player
+        if (Math.abs(e.x - player.x) < 30 && Math.abs(e.y - player.y) < 30 && player.invincible <= 0) {
+            player.hp -= 15;
+            player.invincible = 60;
+            player.vy = -5;
+            player.vx = (e.x > player.x ? -5 : 5);
+            shake = 10;
+            showToast("OUCH!", "#f00");
         }
+        
+        // Remove dead
+        if (e.hp <= 0) entities.splice(i, 1);
+    });
+    
+    if (player.invincible > 0) player.invincible--;
+    
+    // Death
+    if (player.hp <= 0 || player.y < camY - 200) {
+        gameState = 'DEAD';
+        document.getElementById('game-over').classList.remove('hidden');
+        document.getElementById('final-score').innerText = `DEPTH: ${Math.floor(score/10)} M`;
+    }
+    
+    // Update UI
+    document.getElementById('hp-bar').style.width = Math.max(0, player.hp) + '%';
+    document.getElementById('depth-disp').innerText = Math.floor(score/10) + ' M';
+    
+    if (shake > 0) shake *= 0.9;
+}
 
-        function updateUI() {
-            document.getElementById('hp-bar').style.width = Math.max(0, player.hp) + '%';
-            document.getElementById('score-disp').innerText = Math.floor(score/10) + 'M';
-            document.getElementById('kill-score').innerText = killCount;
+/**
+ * DRAWING
+ */
+function draw() {
+    // Clear
+    ctx.fillStyle = gameState === 'INTRO' ? '#87CEEB' : '#111';
+    ctx.fillRect(0, 0, W, H);
+    
+    ctx.save();
+    
+    if (gameState === 'PLAY' || gameState === 'DEAD') {
+        // Shake
+        ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
+        ctx.translate(0, -camY);
+        
+        // Background Gradient
+        const depth = Math.min(1, score / 5000);
+        const g = ctx.createLinearGradient(0, camY, 0, camY + H);
+        g.addColorStop(0, `rgb(${30*(1-depth)}, ${20*(1-depth)}, ${40*(1-depth)})`);
+        g.addColorStop(1, '#000');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, camY, W, H);
+
+        // Draw Walls (The Tunnel)
+        ctx.fillStyle = '#2a2a2a'; // Dark stone
+        const startY = Math.floor(camY/40)*40;
+        for (let y = startY; y < camY + H + 50; y += 40) {
+            const sinOff = Math.sin(y * 0.002) * (W * 0.25);
+            const cx = W/2 + sinOff;
+            const w = 300;
+            
+            // Left Wall
+            ctx.fillRect(0, y, cx - w/2, 42);
+            // Right Wall
+            ctx.fillRect(cx + w/2, y, W, 42);
+            
+            // Details
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(cx - w/2 - 10, y, 10, 42);
+            ctx.fillRect(cx + w/2, y, 10, 42);
+            ctx.fillStyle = '#2a2a2a';
         }
+    } else {
+        // INTRO DRAWING
+        // Ground
+        ctx.fillStyle = '#4CBB17'; // Grass
+        ctx.fillRect(0, H-150, introChasmStart, 150); // Left
+        ctx.fillRect(introChasmStart + 200, H-150, W, 150); // Right
+        
+        // Pit Gradient
+        const pg = ctx.createLinearGradient(0, H-150, 0, H);
+        pg.addColorStop(0, 'rgba(0,0,0,0)');
+        pg.addColorStop(1, '#000');
+        ctx.fillStyle = pg;
+        ctx.fillRect(introChasmStart, H-150, 200, 150);
+        
+        // Oracle
+        drawOracle(introOracleX, H-150);
+        
+        // Text Bubble
+        ctx.fillStyle = '#fff';
+        ctx.strokeStyle = '#000';
+        const bx = introOracleX - 160, by = H - 280;
+        ctx.beginPath();
+        ctx.roundRect(bx, by, 180, 60, 10);
+        ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx+160, by+60); ctx.lineTo(bx+170, by+80); ctx.lineTo(bx+150, by+60); ctx.fill();
+        
+        ctx.fillStyle = '#000';
+        ctx.font = '10px sans-serif';
+        ctx.fillText("To save your brothers...", bx+20, by+25);
+        ctx.fillText("Descend to the underworld!", bx+20, by+45);
+    }
 
-        function showToast(msg, c) {
-            const t = document.getElementById('toast-msg');
-            t.innerText = msg; t.style.color = c; t.style.opacity = 1;
-            setTimeout(()=>t.style.opacity=0, 1000);
+    // Platforms
+    platforms.forEach(p => {
+        if (p.type === 'stone') ctx.fillStyle = '#555';
+        else if (p.type === 'ice') ctx.fillStyle = '#aaf';
+        else if (p.type === 'slime') ctx.fillStyle = '#0f0';
+        
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        
+        // Detail
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.fillRect(p.x, p.y + p.h - 5, p.w, 5);
+    });
+
+    // Entities
+    entities.forEach(e => {
+        if (e.type === 'bat') drawBat(e);
+        if (e.type === 'slime') drawSlime(e);
+        if (e.type === 'sentinel') drawSentinel(e);
+    });
+
+    // Player
+    drawPlayer();
+
+    // Particles
+    particles.forEach((p, i) => {
+        p.x += p.vx || 0;
+        p.y += p.vy || 0;
+        p.life = (p.life || 20) - 1;
+        ctx.fillStyle = p.c || '#fff';
+        ctx.fillRect(p.x, p.y, 3, 3);
+        if (p.life <= 0) particles.splice(i, 1);
+    });
+
+    // Vignette (Darkness)
+    if (gameState === 'PLAY') {
+        const rad = ctx.createRadialGradient(W/2, H/2, 100, W/2, H/2, H);
+        rad.addColorStop(0, 'transparent');
+        rad.addColorStop(1, 'rgba(0,0,0,0.8)');
+        ctx.fillStyle = rad;
+        ctx.translate(0, camY); // Cancel cam for static overlay
+        ctx.fillRect(0, 0, W, H);
+    }
+
+    ctx.restore();
+}
+
+/**
+ * SPRITE DRAWING FUNCTIONS
+ */
+function drawPlayer() {
+    const x = player.x, y = player.y;
+    const f = player.facing;
+    
+    if (player.invincible > 0 && frame % 4 === 0) return;
+
+    ctx.save();
+    ctx.translate(x + player.w/2, y + player.h/2);
+    ctx.scale(f, 1);
+
+    // Color Palette
+    const skin = '#fb8';
+    const armor = '#248';
+    const scarf = '#f00';
+
+    // Scarf (Flowing)
+    ctx.fillStyle = scarf;
+    const flow = Math.sin(frame * 0.5) * 5;
+    ctx.fillRect(-10, -15, 20, 5); // Neck
+    ctx.fillRect(-15 + flow, -15, 10, 20); // Tail
+
+    // Head
+    ctx.fillStyle = skin;
+    ctx.fillRect(-6, -24, 12, 12);
+    // Helmet
+    ctx.fillStyle = '#ddd';
+    ctx.fillRect(-7, -26, 14, 6);
+    ctx.fillRect(-2, -26, 4, -8); // Spike
+
+    // Body
+    ctx.fillStyle = armor;
+    ctx.fillRect(-8, -12, 16, 20);
+    
+    // Arms/Weapon
+    ctx.fillStyle = '#aaa'; // Sword
+    if (player.atkTimer > 0) {
+        ctx.rotate(Math.PI / 4);
+        ctx.fillRect(10, -10, 30, 6); // Slash pose
+    } else {
+        ctx.fillRect(10, 0, 4, 25); // Idle sword
+    }
+
+    // Legs
+    ctx.fillStyle = '#333';
+    if (player.anim === 'run') {
+        const leg = Math.sin(frame * 0.5) * 10;
+        ctx.fillRect(-8 + leg, 8, 6, 16);
+        ctx.fillRect(2 - leg, 8, 6, 16);
+    } else if (player.anim === 'jump') {
+        ctx.fillRect(-8, 6, 6, 10);
+        ctx.fillRect(2, 8, 6, 14);
+    } else {
+        ctx.fillRect(-8, 8, 6, 16);
+        ctx.fillRect(2, 8, 6, 16);
+    }
+
+    ctx.restore();
+}
+
+function drawBat(e) {
+    ctx.fillStyle = '#555';
+    const wingY = Math.sin(frame * 0.5) * 10;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, 8, 0, Math.PI*2); // Body
+    ctx.fill();
+    // Wings
+    ctx.beginPath();
+    ctx.moveTo(e.x - 5, e.y);
+    ctx.lineTo(e.x - 20, e.y - 10 + wingY);
+    ctx.lineTo(e.x - 10, e.y + 10);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(e.x + 5, e.y);
+    ctx.lineTo(e.x + 20, e.y - 10 + wingY);
+    ctx.lineTo(e.x + 10, e.y + 10);
+    ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#f00';
+    ctx.fillRect(e.x-3, e.y-2, 2, 2);
+    ctx.fillRect(e.x+1, e.y-2, 2, 2);
+}
+
+function drawSlime(e) {
+    const pulse = Math.sin(frame * 0.2) * 2;
+    ctx.fillStyle = 'rgba(0, 255, 0, 0.7)';
+    ctx.beginPath();
+    ctx.arc(e.x, e.y + 5 - pulse, 12 + pulse, Math.PI, 0);
+    ctx.lineTo(e.x + 12 + pulse, e.y + 15);
+    ctx.lineTo(e.x - 12 - pulse, e.y + 15);
+    ctx.fill();
+    // Core
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(e.x - 3, e.y, 6, 6);
+}
+
+function drawSentinel(e) {
+    ctx.fillStyle = '#444';
+    ctx.fillRect(e.x - 10, e.y - 15, 20, 30);
+    // Eye
+    ctx.fillStyle = `hsl(${frame * 5}, 100%, 50%)`;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y - 5, 6, 0, Math.PI*2);
+    ctx.fill();
+    // Spikes
+    ctx.fillStyle = '#888';
+    ctx.beginPath();
+    ctx.moveTo(e.x - 15, e.y); ctx.lineTo(e.x - 5, e.y); ctx.lineTo(e.x - 10, e.y - 10);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(e.x + 15, e.y); ctx.lineTo(e.x + 5, e.y); ctx.lineTo(e.x + 10, e.y - 10);
+    ctx.fill();
+}
+
+function drawOracle(x, y) {
+    ctx.fillStyle = '#222';
+    // Tall Robe
+    ctx.beginPath();
+    ctx.moveTo(x, y - 100);
+    ctx.quadraticCurveTo(x + 30, y - 50, x + 40, y);
+    ctx.lineTo(x - 40, y);
+    ctx.quadraticCurveTo(x - 30, y - 50, x, y - 100);
+    ctx.fill();
+    // Glowing Face
+    ctx.shadowBlur = 20;
+    ctx.shadowColor = '#0ff';
+    ctx.fillStyle = '#0ff';
+    ctx.fillRect(x - 5, y - 85, 4, 4);
+    ctx.fillRect(x + 1, y - 85, 4, 4);
+    ctx.shadowBlur = 0;
+}
+
+function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.style.color = color;
+    t.style.opacity = 1;
+    setTimeout(() => t.style.opacity = 0, 1000);
+}
+
+function spawnParticles(x, y, c, count) {
+    for(let i=0; i<count; i++) {
+        particles.push({
+            x: x, y: y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5,
+            c: c, life: 20
+        });
+    }
+}
+
+/**
+ * CONTROLS
+ */
+// Touch Stick
+const stick = document.getElementById('joystick');
+const knob = document.getElementById('stick-knob');
+let touchId = null, sX, sY;
+
+stick.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    touchId = t.identifier;
+    sX = t.clientX; sY = t.clientY;
+}, {passive:false});
+
+stick.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if(touchId === null) return;
+    for(let i=0; i<e.changedTouches.length; i++) {
+        if(e.changedTouches[i].identifier === touchId) {
+            const t = e.changedTouches[i];
+            let dx = t.clientX - sX;
+            let dy = t.clientY - sY;
+            const dist = Math.hypot(dx, dy);
+            const max = 35;
+            if(dist > max) { dx = (dx/dist)*max; dy = (dy/dist)*max; }
+            knob.style.transform = `translate(${dx}px, ${dy}px)`;
+            keys.x = dx / max;
         }
+    }
+}, {passive:false});
 
-        function applyItem(type) {
-            // (Same as before)
-            if(type === 'red') player.hp = Math.min(100, player.hp+30);
-        }
+const endStick = () => { touchId = null; keys.x = 0; knob.style.transform = 'translate(0,0)'; };
+stick.addEventListener('touchend', endStick);
+stick.addEventListener('touchcancel', endStick);
 
-        function loop() {
-            update();
-            draw();
-            requestAnimationFrame(loop);
-        }
+// Buttons
+const bind = (id, k) => {
+    const b = document.getElementById(id);
+    b.addEventListener('touchstart', e => { e.preventDefault(); keys[k] = true; b.style.transform='scale(0.9)'; });
+    b.addEventListener('touchend', e => { e.preventDefault(); keys[k] = false; b.style.transform='scale(1)'; });
+};
+bind('btn-jump', 'jump');
+bind('btn-atk', 'atk');
 
-    </script>
+</script>
 </body>
 </html>
